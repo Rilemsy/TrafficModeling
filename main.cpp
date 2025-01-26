@@ -1,72 +1,127 @@
-#include <DrawMap.h>
-
-#include <iostream>
-
 #include <QApplication>
-#include <QPixmap>
-#include <QScreen>
-#include <QGuiApplication>
+#include <QWidget>
+#include <QMouseEvent>
 
-#include <osmscout/db/Database.h>
+#include <osmscoutclientqt/OSMScoutQt.h>
 
-#include <osmscoutmap/MapService.h>
+const auto MAX_ZOOM = 20;
+const auto MIN_ZOOM = 0;
+const auto MAP_DPI = 96;
 
-#include <osmscout/feature/ConstructionYearFeature.h>
-
-#include <osmscoutmapqt/MapPainterQt.h>
-
-int main(int argc, char **argv)
+namespace {
+// used with QWheelEvent
+template <typename EventType>
+auto pos(EventType* event)
 {
-    QApplication app (argc, argv,true);
-    // QPushButton button ("Hello world !");
-    // button.show();
-    // return app.exec();
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+    return event->pos();
+#else
+    return event->position().toPoint();
+#endif
+}
 
-    assert(QGuiApplication::primaryScreen());
-    DrawMapDemo drawDemo("DrawMapQt", argc, argv,
-                         QGuiApplication::primaryScreen()->physicalDotsPerInch());
+// used with QMouseEvent
+template <typename EventType>
+auto pos2(EventType* event)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    return event->pos();
+#else
+    return event->position().toPoint();
+#endif
+}
+}
 
-    if (!drawDemo.OpenDatabase()){
-        return 2;
-    }
+class MapFrame : public QWidget {
+public:
+    explicit MapFrame(const QString& maps_dir, const QString& stylesheet_file)
+    {
+        m_currentProjection.Set({0, 0}, 0.0, osmscout::Magnification{osmscout::Magnification::magWorld}, MAP_DPI, width(), height());
 
-    Arguments args = drawDemo.GetArguments();
-
-    auto *pixmap=new QPixmap(static_cast<int>(args.width),
-                               static_cast<int>(args.height));
-
-    auto* painter=new QPainter(pixmap);
-
-    osmscout::MapPainterQt        mapPainter(drawDemo.styleConfig);
-
-    osmscout::TypeInfoRef         buildingType=drawDemo.database->GetTypeConfig()->GetTypeInfo("building");
-
-
-    if (buildingType!=nullptr) {
-        /*
-    osmscout::FillStyleProcessorRef constructionProcessor=std::make_shared<ConstructionProcessor>(*db->GetTypeConfig());
-    drawParameter.RegisterFillStyleProcessor(buildingType->GetIndex(),
-                                             constructionProcessor);*/
-
-        /*
-    osmscout::FillStyleProcessorRef addressProcessor=std::make_shared<AddressProcessor>(*db->GetTypeConfig());
-    drawParameter.RegisterFillStyleProcessor(buildingType->GetIndex(),
-                                          addressProcessor);*/
-    }
-
-    drawDemo.LoadData();
-
-    if (mapPainter.DrawMap(drawDemo.projection,
-                           drawDemo.drawParameter,
-                           drawDemo.data,
-                           painter)) {
-        if (!pixmap->save(QString::fromStdString(args.output),"PNG",-1)) {
-            std::cerr << "Cannot write PNG" << std::endl;
+        QFileInfo stylesheetFile(stylesheet_file);
+        if (!osmscout::OSMScoutQt::NewInstance()
+                 .WithMapLookupDirectories({maps_dir})
+                 .WithStyleSheetDirectory(stylesheetFile.dir().path())
+                 .WithStyleSheetFile(stylesheetFile.fileName())
+                 .Init()) {
+            throw std::runtime_error{"failed to init OSMScoutQt"};
         }
+
+        m_renderer = osmscout::OSMScoutQt::GetInstance().MakeMapRenderer(osmscout::RenderingType::TiledRendering);
+        connect(m_renderer, &osmscout::MapRenderer::Redraw, this, [this] {update();});
     }
 
-    delete painter;
-    delete pixmap;
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        auto painter = QPainter(this);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setRenderHint(QPainter::TextAntialiasing, true);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
-    return 0;
+        m_renderer->RenderMap(painter, osmscout::MapViewStruct{
+                                                               m_currentProjection.GetCenter(),
+                                                               osmscout::Bearing{},
+                                                               m_currentProjection.GetMagnification(),
+                                                               static_cast<size_t>(width()),
+                                                               static_cast<size_t>(height()),
+                                                               MAP_DPI,
+                                                               });
+    }
+
+    void mousePressEvent(QMouseEvent* ev) override
+    {
+        m_lastMousePos = ::pos2(ev);
+    }
+
+    void mouseMoveEvent(QMouseEvent* ev) override
+    {
+        auto x_delta = ::pos2(ev).x() - m_lastMousePos.x();
+        auto y_delta = ::pos2(ev).y() - m_lastMousePos.y();
+        m_currentProjection.Move(-x_delta, y_delta);
+        m_lastMousePos = ::pos2(ev);
+        update();
+    }
+
+    void wheelEvent(QWheelEvent* ev) override
+    {
+        auto magnification = m_currentProjection.GetMagnification().GetLevel();
+        if (ev->angleDelta().y() > 0) {
+            if (magnification >= MAX_ZOOM) {
+                return;
+            }
+            magnification++;
+            auto x_delta = (width() / 2. - ::pos(ev).x()) * 0.75;
+            auto y_delta = (height() / 2. - ::pos(ev).y()) * 0.75;
+            m_currentProjection.Move(-x_delta, y_delta);
+        } else {
+            if (magnification <= MIN_ZOOM) {
+                return;
+            }
+            magnification--;
+            auto x_delta = (width() / 2. - ::pos(ev).x()) * 0.75;
+            auto y_delta = (height() / 2. - ::pos(ev).y()) * 0.75;
+            m_currentProjection.Move(x_delta, -y_delta);
+        }
+        m_currentProjection.Set(m_currentProjection.GetCenter(), osmscout::Magnification{osmscout::MagnificationLevel{magnification}}, width(), height());
+        update();
+    }
+
+private:
+    osmscout::MapRenderer* m_renderer;
+    osmscout::MercatorProjection m_currentProjection;
+    QPoint m_lastMousePos;
+};
+
+int main(int argc, char *argv[])
+{
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << ": <map_database_directory> <stylesheet_file>\n";
+        return 1;
+    }
+    osmscout::OSMScoutQt::RegisterQmlTypes();
+    QApplication app(argc, argv);
+    MapFrame map(argv[1], argv[2]);
+    map.show();
+    return QApplication::exec();
 }

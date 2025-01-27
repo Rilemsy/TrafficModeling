@@ -8,11 +8,18 @@ CONFIG += c++17
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+INCLUDEPATH += "/usr/local/include"
+
+LIBS += -L"/usr/local/lib" -losmscoutd -losmscout_mapd -losmscout_map_qtd -losmscout_client_qtd
+
 SOURCES += \
+    GraphicsScene.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+    DrawMap.h \
+    GraphicsScene.h \
     mainwindow.h
 
 FORMS += \

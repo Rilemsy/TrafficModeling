@@ -6,12 +6,6 @@
 #include "DrawMap.h"
 #include "GraphicsScene.h"
 
-QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
-QT_END_NAMESPACE
-
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -23,8 +17,8 @@ public:
     void SetData();
 
 private:
+    QGraphicsView *graphicsView;
     GraphicsScene *scene_;
-    Ui::MainWindow *ui;
     DrawMapDemo MapData_;
     Arguments args_;
     QPainter *painter_;

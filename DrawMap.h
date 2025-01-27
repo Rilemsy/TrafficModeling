@@ -190,13 +190,13 @@ public:
                        args.width,
                        args.height);
 
-        if (!args.basemap.empty()) {
-            basemapDatabase=std::make_shared<osmscout::BasemapDatabase>(osmscout::BasemapDatabaseParameter{});
-            if (!basemapDatabase->Open(args.basemap)){
-                std::cerr << "Cannot open base map" << std::endl;
-                return false;
-            }
-        }
+        // if (!args.basemap.empty()) {
+        //     basemapDatabase=std::make_shared<osmscout::BasemapDatabase>(osmscout::BasemapDatabaseParameter{});
+        //     if (!basemapDatabase->Open(args.basemap)){
+        //         std::cerr << "Cannot open base map" << std::endl;
+        //         return false;
+        //     }
+        // }
 
         return true;
     }

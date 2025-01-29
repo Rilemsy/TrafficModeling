@@ -5,6 +5,7 @@
 
 #include "DrawMap.h"
 #include "GraphicsScene.h"
+#include "Router.h"
 
 class MainWindow : public QMainWindow
 {
@@ -15,8 +16,10 @@ public:
     ~MainWindow();
 
     void SetData();
+    void paintPoint();
 
 private:
+    Router *router_;
     QGraphicsView *graphicsView;
     GraphicsScene *scene_;
     DrawMapDemo MapData_;

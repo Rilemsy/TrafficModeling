@@ -14,12 +14,15 @@ LIBS += -L"/usr/local/lib" -losmscoutd -losmscout_mapd -losmscout_map_qtd -losms
 
 SOURCES += \
     GraphicsScene.cpp \
+    Router.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+    CustomStructures.h \
     DrawMap.h \
     GraphicsScene.h \
+    Router.h \
     mainwindow.h
 
 FORMS +=

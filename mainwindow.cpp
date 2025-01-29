@@ -4,7 +4,8 @@
 #include <osmscoutmapqt/MapPainterQt.h>
 
 #include <QGuiApplication>
-
+#include <QApplication>
+#include <QScreen>
 #include "mainwindow.h"
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
@@ -12,9 +13,15 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     MapData_("QMap", argc, argv, screen)
 {
     //ui->setupUi(this);
-    scene_ = new GraphicsScene();
 
-    scene_->setSceneRect(0, 0, 800, 600);
+    router_ = new Router();
+
+    scene_ = new GraphicsScene();
+    auto screenGeometry = QApplication::primaryScreen()->geometry();
+    //scene_->setSceneRect(0, 0, 800, 600);
+    scene_->setSceneRect(0, 0, screenGeometry.width(), screenGeometry.height());
+
+
     ///scene_->addRect(100, 100, 200, 150, QPen(Qt::black), QBrush(Qt::blue));
     //scene_->addEllipse(300, 200, 100, 100, QPen(Qt::red), QBrush(Qt::green));
     //scene_->addText("Hello, QGraphicsView!");
@@ -46,6 +53,15 @@ void MainWindow::SetData()
     {
         scene_->setMap(pixmap_);
     }
+}
+
+void MainWindow::paintPoint()
+{
+    router_->LoadDataNodes(args_,osmscout::GeoCoord(55.541053, 42.082765));
+    router_->SetupGraphFromNodes();
+
+    auto graph = router_->getGraph();
+
 }
 
 MainWindow::~MainWindow()

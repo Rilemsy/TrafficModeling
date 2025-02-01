@@ -6,6 +6,7 @@
 #include <QGuiApplication>
 #include <QApplication>
 #include <QScreen>
+
 #include "mainwindow.h"
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
@@ -62,11 +63,23 @@ void MainWindow::paintPoint()
     router_->LoadDataNodes(args_, dist, pointFrom);
     router_->SetupGraphFromNodes();
 
-    auto graph = router_->getGraph();
+    auto& graph = router_->getGraph();
     scene_->paintDots(graph);
 
 
 }
+
+void MainWindow::generateDensities(const std::vector<Node> &graph)
+{
+    // auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
+    //     { return rPeak1*exp(-((t-tPeak1)/(2*sPeak1*sPeak1))) +  rPeak2*exp(-((t-tPeak2)/(2*sPeak2*sPeak2))); };
+    // int time = 0; // in hours
+    // for (auto& node : graph)
+    // {
+
+    // }
+}
+
 
 MainWindow::~MainWindow()
 {

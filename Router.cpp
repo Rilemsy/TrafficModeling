@@ -59,19 +59,19 @@ void Router::SetupGraphFromNodes()
         Node node;
         node.point = routeNode.GetPoint();
 
-        // for (const auto &routePath : routeNode.paths)
-        // {
-        //     if (!routePath.IsUsable(vehicle_) || routePath.IsRestricted(vehicle_))
-        //     {
-        //         continue;
-        //     }
-        //     Path path;
-        //     path.distanceLength = routePath.distance;
-        //     path.targetNodeIndex = idToIndexMap[routePath.id];
-        //     path.flags = routePath.flags;
-        //     path.fileRef = routeNode.objects[routePath.objectIndex].object;
-        //     node.paths.push_back(path);
-        // }
+        for (const auto &routePath : routeNode.paths)
+        {
+            if (!routePath.IsUsable(vehicle_) || routePath.IsRestricted(vehicle_))
+            {
+                continue;
+            }
+            Path path;
+            path.distanceLength = routePath.distance;
+            path.targetNodeIndex = idToIndexMap[routePath.id];
+            path.flags = routePath.flags;
+            path.fileRef = routeNode.objects[routePath.objectIndex].object;
+            node.paths.push_back(path);
+        }
         graph_.push_back(node);
     }
 }

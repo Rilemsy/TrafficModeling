@@ -17,6 +17,7 @@ public:
 
     void SetData();
     void paintPoint();
+    void generateDensities(const std::vector<Node> &graph);
 
 private:
     Router *router_;

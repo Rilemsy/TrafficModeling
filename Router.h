@@ -13,14 +13,14 @@ public:
     Router();
     std::vector<Node> &getGraph() { return graph_; }
 
-    void LoadDataNodes(const Arguments &args, //const osmscout::Distance &maxRange,
+    void LoadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
                        osmscout::GeoCoord coord);
     void SetupGraphFromNodes();
     void OpenFile(const Arguments &args);
 private:
     std::vector<osmscout::RouteNode> NodeList_;
     osmscout::FileScanner routeReader_;
-    osmscout::Vehicle vehicle_;
+    osmscout::Vehicle vehicle_ = osmscout::vehicleCar;
     std::vector<Node> graph_;
     uint32_t nodeCount_;
 };

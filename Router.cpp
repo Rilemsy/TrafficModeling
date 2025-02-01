@@ -3,7 +3,7 @@
 Router::Router() {}
 
 void Router::LoadDataNodes(const Arguments &args,
-                           //const osmscout::Distance &maxRange,
+                           const osmscout::Distance &maxRange,
                            osmscout::GeoCoord coord)
 {
     try
@@ -17,7 +17,7 @@ void Router::LoadDataNodes(const Arguments &args,
         {
             osmscout::RouteNode node;
             node.Read(routeReader_);
-            size_t validPaths = 0;
+            size_t validPaths = 0;                                              /////////////
             for (const auto &path : node.paths)
             {
                 if (path.IsUsable(vehicle_) || path.IsRestricted(vehicle_))
@@ -27,7 +27,7 @@ void Router::LoadDataNodes(const Arguments &args,
             }
             osmscout::Distance directDistance =
                 osmscout::GetSphericalDistance(coord, node.GetCoord());
-            if (validPaths > 0 )//&& directDistance <= maxRange)
+            if (validPaths > 0  && directDistance <= maxRange)
             {
                 NodeList_.push_back(node);
             }

@@ -57,10 +57,14 @@ void MainWindow::SetData()
 
 void MainWindow::paintPoint()
 {
-    router_->LoadDataNodes(args_,osmscout::GeoCoord(55.541053, 42.082765));
+    osmscout::GeoCoord pointFrom(55.541053, 42.082765);
+    osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.54236, 42.06341));
+    router_->LoadDataNodes(args_, dist, pointFrom);
     router_->SetupGraphFromNodes();
 
     auto graph = router_->getGraph();
+    scene_->paintDots(graph);
+
 
 }
 

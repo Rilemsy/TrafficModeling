@@ -13,6 +13,8 @@
 
 #include <osmscout/projection/MercatorProjection.h>
 
+#include "CustomStructures.h"
+
 class GraphicsScene : public QGraphicsScene
 {
     Q_OBJECT
@@ -30,6 +32,7 @@ public:
     {
         projection_ = projection;
     }
+    void paintDots(const std::vector<Node> &graph);
 
 private:
     QGraphicsPixmapItem pixmapItem_;

@@ -10,6 +10,7 @@ int main(int argc, char *argv[])
     MainWindow w(argc, argv,
                  QGuiApplication::primaryScreen()->physicalDotsPerInch());;
     w.SetData();
+    w.paintPoint();
     w.show();
     return a.exec();
 }

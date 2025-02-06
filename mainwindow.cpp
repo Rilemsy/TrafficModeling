@@ -7,6 +7,9 @@
 #include <QApplication>
 #include <QScreen>
 
+#include <queue>
+#include <unordered_set>
+
 #include "mainwindow.h"
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
@@ -80,6 +83,11 @@ void MainWindow::generateDensities(const std::vector<Node> &graph)
     // }
 }
 
+void MainWindow::calculatePath()
+{
+    auto compare = [](std::pair<int , double> a, std::pair<int , double> b) { return a.second < b.second; };
+    std::priority_queue<std::pair<int , double>, std::vector<std::pair<int , double>>, decltype(compare)> openSet(compare);
+}
 
 MainWindow::~MainWindow()
 {

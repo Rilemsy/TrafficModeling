@@ -18,6 +18,7 @@ public:
     void SetData();
     void paintPoint();
     void generateDensities(const std::vector<Node> &graph);
+    void calculatePath();
 
 private:
     Router *router_;

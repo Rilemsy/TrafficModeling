@@ -12,9 +12,9 @@ void GraphicsScene::setMap(QPixmap *value)
 
 void GraphicsScene::clearMap() { QGraphicsScene::removeItem(&pixmapItem_); }
 
-void GraphicsScene::paintDots(const std::vector<Node> &graph)
+void GraphicsScene::paintDots(std::vector<Node>* graph)
 {
-    for (auto node : graph)
+    for (auto node : *graph)
     {
         QColor color;
 

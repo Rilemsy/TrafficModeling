@@ -10,12 +10,14 @@ struct Path
     size_t targetNodeIndex;
     uint8_t flags;
     double costs;
+    std::vector<double> densities;
 };
 
 struct Node
 {
     osmscout::Point point;
-    std::vector<Path> paths;
+    //std::vector<size_t> paths;
+    std::vector<unsigned int> paths;
     double costs;
 
     bool flag = false;
@@ -26,7 +28,7 @@ struct Way
 {
     Node start;
     Node end;
-    std::vector<double> densities;
+
 };
 
 #endif // CUSTOMSTRUCTURES_H

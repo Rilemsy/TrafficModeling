@@ -32,7 +32,7 @@ public:
     {
         projection_ = projection;
     }
-    void paintDots(const std::vector<Node> &graph);
+    void paintDots(std::vector<Node>* graph);
 
 private:
     QGraphicsPixmapItem pixmapItem_;

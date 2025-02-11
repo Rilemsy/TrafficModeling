@@ -70,7 +70,10 @@ void Router::SetupGraphFromNodes()
             path.targetNodeIndex = idToIndexMap[routePath.id];
             path.flags = routePath.flags;
             path.fileRef = routeNode.objects[routePath.objectIndex].object;
-            node.paths.push_back(path);
+            int lastIndex = _pathList.size();
+            _pathList.push_back(path);
+            node.paths.push_back(lastIndex);
+            //node.paths.push_back(path);
         }
         graph_.push_back(node);
     }
@@ -83,4 +86,18 @@ void Router::OpenFile(const Arguments &args)
     nodeCount_ = routeReader_.ReadUInt32();
     routeReader_.ReadUInt32();
     NodeList_.reserve(nodeCount_);
+}
+
+void Router::generateDensities()
+{
+    auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
+    { return rPeak1*exp(-(((t-tPeak1)*(t-tPeak1))/(2*sPeak1*sPeak1))) +  rPeak2*exp(-(((t-tPeak2)*(t-tPeak2))/(2*sPeak2*sPeak2))); };
+    //int time = 0; // in hours
+    for (auto& path : _pathList)
+    {
+        for (int i = 0; i < 24; i++)
+        {
+            path.densities.push_back(gauseFunction(i,90,8,2.4,110,18,3.2));
+        }
+    }
 }

@@ -17,8 +17,9 @@ public:
 
     void SetData();
     void paintPoint();
-    void generateDensities(const std::vector<Node> &graph);
+    void generateDensities();
     void calculatePath();
+    void initDensities();
 
 private:
     Router *router_;
@@ -28,6 +29,8 @@ private:
     Arguments args_;
     QPainter *painter_;
     QPixmap *pixmap_;
+    std::vector<Node>* graphRef;
+    std::vector<Path>* pathListRef;
     double zoom = 1;
 };
 #endif // MAINWINDOW_H

@@ -66,13 +66,16 @@ void MainWindow::paintPoint()
     router_->LoadDataNodes(args_, dist, pointFrom);
     router_->SetupGraphFromNodes();
 
-    auto& graph = router_->getGraph();
-    scene_->paintDots(graph);
+    //auto& graph = router_->getGraph();
+    graphRef = &router_->getGraph();
+    pathListRef = &router_->getPathList();
+    router_->generateDensities();
+    scene_->paintDots(graphRef);
 
 
 }
 
-void MainWindow::generateDensities(const std::vector<Node> &graph)
+void MainWindow::generateDensities()
 {
     // auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
     //     { return rPeak1*exp(-((t-tPeak1)/(2*sPeak1*sPeak1))) +  rPeak2*exp(-((t-tPeak2)/(2*sPeak2*sPeak2))); };

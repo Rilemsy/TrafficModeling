@@ -12,16 +12,20 @@ class Router
 public:
     Router();
     std::vector<Node> &getGraph() { return graph_; }
+    std::vector<Path> &getPathList() {return _pathList;}
 
     void LoadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
                        osmscout::GeoCoord coord);
     void SetupGraphFromNodes();
     void OpenFile(const Arguments &args);
+    void generateDensities();
+
 private:
     std::vector<osmscout::RouteNode> NodeList_;
     osmscout::FileScanner routeReader_;
     osmscout::Vehicle vehicle_ = osmscout::vehicleCar;
     std::vector<Node> graph_;
+    std::vector<Path> _pathList;
     uint32_t nodeCount_;
 };
 

@@ -9,7 +9,7 @@ struct Path
     osmscout::ObjectFileRef fileRef;
     size_t targetNodeIndex;
     uint8_t flags;
-    double costs;
+    double cost;
     std::vector<double> densities;
 };
 
@@ -18,7 +18,7 @@ struct Node
     osmscout::Point point;
     //std::vector<size_t> paths;
     std::vector<unsigned int> paths;
-    double costs;
+    double cost;
 
     bool flag = false;
     size_t previousNodeIndex = SIZE_MAX;

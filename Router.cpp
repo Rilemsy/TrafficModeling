@@ -1,4 +1,6 @@
 #include "Router.h"
+#include <queue>
+#include <set>
 
 Router::Router() {}
 
@@ -101,3 +103,54 @@ void Router::generateDensities()
         }
     }
 }
+
+void Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
+{
+    int FIRST_DENSITY = 0;
+    int MAX_SPEED = 80;
+
+    auto compare = [](std::pair<int,double> a, std::pair<int,double> b) {return a.second < b.second;};
+    std::priority_queue<std::pair<int, double>, std::vector<std::pair<int,double>>, decltype(compare)> priorityQueue(compare);
+
+    priorityQueue.push({startNodeIndex, 0});
+
+    std::set<int> closedSet;
+
+    while (!priorityQueue.empty())
+    {
+        int currentIndex = priorityQueue.top().first;
+        priorityQueue.pop();
+
+        if (currentIndex == targetNodeIndex)
+            return;
+
+        closedSet.insert(currentIndex);
+        //auto currentNode = graph_[currentIndex];
+        for (const auto& path: graph_[currentIndex].paths)
+        {
+            //auto& neighborNode = _pathList[path].targetNodeIndex;
+            if (closedSet.find(_pathList[path].targetNodeIndex) != closedSet.end())
+                continue;
+
+            double cost = (_pathList[path].distanceLength.AsMeter() / 1000) / trafficDiagrammFunctionTriangular(_pathList[path].densities[FIRST_DENSITY]);
+            double h = (graph_[currentIndex].point.GetCoord().GetDistance(graph_[currentIndex].point.GetCoord()).AsMeter() / 1000) / MAX_SPEED;
+        }
+
+    }
+
+}
+
+double Router::trafficDiagrammFunctionTriangular(double p)
+{
+    double qc = 1600;
+    double pj = 120;
+    double pc = 20;
+    double vf = 80;
+
+    if (p <= pc) // km/h
+        return vf;
+    else
+        return qc * (1 - (p - pc)/(pj - pc)) / p;
+}
+
+

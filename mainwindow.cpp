@@ -73,6 +73,8 @@ void MainWindow::paintPoint()
     scene_->paintDots(graphRef);
 
 
+    const auto& path = router_->findPathAStar(5,48);
+    scene_->paintPath(graphRef, path);
 }
 
 void MainWindow::generateDensities()

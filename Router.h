@@ -19,7 +19,7 @@ public:
     void SetupGraphFromNodes();
     void OpenFile(const Arguments &args);
     void generateDensities();
-    void findPathAStar(int startNodeIndex, int targetNodeIndex);
+    std::vector<int> findPathAStar(int startNodeIndex, int targetNodeIndex);
     double trafficDiagrammFunctionTriangular(double density);
 
 private:

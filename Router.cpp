@@ -1,6 +1,9 @@
 #include "Router.h"
 #include <queue>
 #include <set>
+#include <unordered_map>
+
+#include <QMap>
 
 Router::Router() {}
 
@@ -104,17 +107,25 @@ void Router::generateDensities()
     }
 }
 
-void Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
+std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
 {
-    int FIRST_DENSITY = 0;
-    int MAX_SPEED = 80;
+    //int FIRST_DENSITY = 0;
+    //int MAX_SPEED = 80;
 
-    auto compare = [](std::pair<int,double> a, std::pair<int,double> b) {return a.second < b.second;};
-    std::priority_queue<std::pair<int, double>, std::vector<std::pair<int,double>>, decltype(compare)> priorityQueue(compare);
+    using NodeCostPair = std::pair<int, double>;
 
-    priorityQueue.push({startNodeIndex, 0});
+    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+        return a.second > b.second;
+    };
 
+    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::unordered_map<int, double> gScore;
+    std::unordered_map<int, int> previous;
     std::set<int> closedSet;
+
+    // Initialize start node
+    gScore[startNodeIndex] = 0.0;
+    priorityQueue.push({startNodeIndex, 0.0});
 
     while (!priorityQueue.empty())
     {
@@ -122,22 +133,57 @@ void Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
         priorityQueue.pop();
 
         if (currentIndex == targetNodeIndex)
-            return;
+            break;
+
+        if (closedSet.find(currentIndex) != closedSet.end())
+            continue;
 
         closedSet.insert(currentIndex);
-        //auto currentNode = graph_[currentIndex];
-        for (const auto& path: graph_[currentIndex].paths)
+
+        // Iterate over neighbors
+        for (const auto& path : graph_[currentIndex].paths)
         {
-            //auto& neighborNode = _pathList[path].targetNodeIndex;
-            if (closedSet.find(_pathList[path].targetNodeIndex) != closedSet.end())
+            int neighborIndex = _pathList[path].targetNodeIndex;
+
+            if (closedSet.find(neighborIndex) != closedSet.end())
                 continue;
 
-            double cost = (_pathList[path].distanceLength.AsMeter() / 1000) / trafficDiagrammFunctionTriangular(_pathList[path].densities[FIRST_DENSITY]);
-            double h = (graph_[currentIndex].point.GetCoord().GetDistance(graph_[currentIndex].point.GetCoord()).AsMeter() / 1000) / MAX_SPEED;
-        }
+            // Compute gScore (cost to reach this neighbor)
+            double pathCost = _pathList[path].distanceLength.AsMeter() / 1000.0;
+            double tentativeGScore = gScore[currentIndex] + pathCost;
 
+            double h = graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
+
+            // Check if this path to neighbor is better
+            if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
+            {
+                gScore[neighborIndex] = tentativeGScore;
+                double fScore = tentativeGScore + h; // A* cost function
+
+                priorityQueue.push({neighborIndex, fScore});
+                previous[neighborIndex] = currentIndex;
+            }
+        }
     }
 
+    if (previous.find(targetNodeIndex) == previous.end())
+    {
+        std::cout << "No path found!" << std::endl;
+        return {};
+    }
+
+    std::vector<int> path;
+    for (int at = targetNodeIndex; at != startNodeIndex; at = previous[at])
+    {
+        path.push_back(at);
+    }
+    path.push_back(startNodeIndex);
+    std::reverse(path.begin(), path.end());
+
+    std::cout << "Path found: ";
+    for (int node : path)
+        std::cout << node << " -> ";
+    return path;
 }
 
 double Router::trafficDiagrammFunctionTriangular(double p)

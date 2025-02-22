@@ -32,5 +32,8 @@ private:
     std::vector<Node>* graphRef;
     std::vector<Path>* pathListRef;
     double zoom = 1;
+
+    unsigned int _modelingTime = 0;  // в минутах
+
 };
 #endif // MAINWINDOW_H

@@ -6,6 +6,14 @@
 #include <QGuiApplication>
 #include <QApplication>
 #include <QScreen>
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QLineEdit>
+#include <QGroupBox>
+#include <QGridLayout>
+#include <QVBoxLayout>
+#include <QRadioButton>
+#include <QLabel>
 
 #include <queue>
 #include <unordered_set>
@@ -25,18 +33,48 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     //scene_->setSceneRect(0, 0, 800, 600);
     scene_->setSceneRect(0, 0, screenGeometry.width(), screenGeometry.height());
 
+    QWidget* centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
 
-    ///scene_->addRect(100, 100, 200, 150, QPen(Qt::black), QBrush(Qt::blue));
-    //scene_->addEllipse(300, 200, 100, 100, QPen(Qt::red), QBrush(Qt::green));
-    //scene_->addText("Hello, QGraphicsView!");
-    //ui->graphicsView->setScene(scene_);
-    //ui->graphicsView->viewport()->installEventFilter(this);
-    //scene_->setView(ui->graphicsView);
+    QHBoxLayout* mainLayout = new QHBoxLayout(centralWidget);
+
 
     graphicsView = new QGraphicsView(scene_, this);
-    setCentralWidget(graphicsView);
+    //setCentralWidget(graphicsView);
     graphicsView->setRenderHint(QPainter::Antialiasing); // Enable smooth rendering
     graphicsView->setDragMode(QGraphicsView::ScrollHandDrag); // Enable drag mode
+
+    QGroupBox* timeGroupBox = new QGroupBox(this);
+    QGridLayout* timeLayout = new QGridLayout;
+    QLabel* modelingTimeLabel = new QLabel("Время: " + (QString::number(_modelingTime)),timeGroupBox);
+    QLabel* startTimeLabel = new QLabel("Время начала поездки:");
+    QLineEdit* currentTimeLineEdit = new QLineEdit(this);
+    //currentTimeLineEdit->setPlaceholderText("Время начала поездки");
+    QLabel* timeIntervalLabel = new QLabel("Интервал времени:");
+    QLineEdit* timeIntervalLineEdit = new QLineEdit(this);
+    //timeIntervalLineEdit->setPlaceholderText("Интервал времени");  // в минутах
+    QPushButton* increaseTimeLineEdit = new QPushButton("Увеличить время",this);
+
+    // modelingTimeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    // timeIntervalLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+    timeLayout->addWidget(startTimeLabel, 1, 0);
+    timeLayout->addWidget(timeIntervalLabel, 2, 0);
+
+
+    timeLayout->addWidget(currentTimeLineEdit,1,1);
+    timeLayout->addWidget(timeIntervalLineEdit,2,1);
+    timeLayout->addWidget(modelingTimeLabel,3,0,1,2);
+    timeLayout->addWidget(increaseTimeLineEdit,4,0,1,2);
+    timeLayout->setColumnStretch(timeLayout->columnCount(),1);
+    timeLayout->setRowStretch(timeLayout->rowCount(),1);
+    //timeLayout->addStretch(1);
+
+    timeGroupBox->setLayout(timeLayout);
+
+    mainLayout->addWidget(timeGroupBox);
+    mainLayout->addWidget(graphicsView,1);
 
     MapData_.OpenDatabase();
     args_ = MapData_.GetArguments();
@@ -61,8 +99,8 @@ void MainWindow::SetData()
 
 void MainWindow::paintPoint()
 {
-    osmscout::GeoCoord pointFrom(55.541053, 42.082765);
-    osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.54236, 42.06341));
+    osmscout::GeoCoord pointFrom(55.51882, 42.07721);
+    osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.50585, 42.06659));
     router_->LoadDataNodes(args_, dist, pointFrom);
     router_->SetupGraphFromNodes();
 
@@ -73,7 +111,7 @@ void MainWindow::paintPoint()
     scene_->paintDots(graphRef);
 
 
-    const auto& path = router_->findPathAStar(5,48);
+    const auto& path = router_->findPathAStar(5,98);
     scene_->paintPath(graphRef, path);
 }
 

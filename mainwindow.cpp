@@ -48,12 +48,12 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QGridLayout* timeLayout = new QGridLayout;
     QLabel* modelingTimeLabel = new QLabel("Время: " + (QString::number(_modelingTime)),timeGroupBox);
     QLabel* startTimeLabel = new QLabel("Время начала поездки:");
-    QLineEdit* currentTimeLineEdit = new QLineEdit(this);
+    _startTimeLineEdit = new QLineEdit(QString::number(_modelingTime),this);
     //currentTimeLineEdit->setPlaceholderText("Время начала поездки");
     QLabel* timeIntervalLabel = new QLabel("Интервал времени:");
-    QLineEdit* timeIntervalLineEdit = new QLineEdit(this);
+    QLineEdit* timeIntervalLineEdit = new QLineEdit(QString::number(_intervalTime),this);
     //timeIntervalLineEdit->setPlaceholderText("Интервал времени");  // в минутах
-    QPushButton* increaseTimeLineEdit = new QPushButton("Увеличить время",this);
+    QPushButton* increaseTimeButton = new QPushButton("Увеличить время",this);
 
     // modelingTimeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -62,11 +62,10 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(startTimeLabel, 1, 0);
     timeLayout->addWidget(timeIntervalLabel, 2, 0);
 
-
-    timeLayout->addWidget(currentTimeLineEdit,1,1);
+    timeLayout->addWidget(_startTimeLineEdit,1,1);
     timeLayout->addWidget(timeIntervalLineEdit,2,1);
     timeLayout->addWidget(modelingTimeLabel,3,0,1,2);
-    timeLayout->addWidget(increaseTimeLineEdit,4,0,1,2);
+    timeLayout->addWidget(increaseTimeButton,4,0,1,2);
     timeLayout->setColumnStretch(timeLayout->columnCount(),1);
     timeLayout->setRowStretch(timeLayout->rowCount(),1);
     //timeLayout->addStretch(1);
@@ -82,6 +81,13 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     pixmap_ = new QPixmap(static_cast<int>(args_.width),
                           static_cast<int>(args_.height));
     painter_ = new QPainter(pixmap_);
+
+    connect(increaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
+    {
+        _modelingTime += _intervalTime;
+        modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
+    });
+
 }
 
 void MainWindow::SetData()
@@ -107,11 +113,12 @@ void MainWindow::paintPoint()
     //auto& graph = router_->getGraph();
     graphRef = &router_->getGraph();
     pathListRef = &router_->getPathList();
-    router_->generateDensities();
+    router_->generateDensities(15);
     scene_->paintDots(graphRef);
 
 
-    const auto& path = router_->findPathAStar(5,98);
+    //const auto& path = router_->findPathAStar(5,98);
+    const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
     scene_->paintPath(graphRef, path);
 }
 

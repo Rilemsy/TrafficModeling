@@ -93,14 +93,15 @@ void Router::OpenFile(const Arguments &args)
     NodeList_.reserve(nodeCount_);
 }
 
-void Router::generateDensities()
+void Router::generateDensities(int intervalTime)
 {
     auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
     { return rPeak1*exp(-(((t-tPeak1)*(t-tPeak1))/(2*sPeak1*sPeak1))) +  rPeak2*exp(-(((t-tPeak2)*(t-tPeak2))/(2*sPeak2*sPeak2))); };
     //int time = 0; // in hours
+    int intervalsCount = TIME_RANGE / intervalTime;
     for (auto& path : _pathList)
     {
-        for (int i = 0; i < 24; i++)
+        for (int i = 0; i < intervalsCount; i++)
         {
             path.densities.push_back(gauseFunction(i,90,8,2.4,110,18,3.2));
         }
@@ -186,6 +187,90 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
     return path;
 }
 
+std::vector<int> Router::findPathAStarTime  (int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime)
+{
+    //int FIRST_DENSITY = 0;
+    int MAX_SPEED = 80;
+
+    using NodeCostPair = std::pair<int, double>;
+
+    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+        return a.second > b.second;
+    };
+
+    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::unordered_map<int, double> gScore;         // цена по времени
+    std::unordered_map<int, int> previous;
+    std::set<int> closedSet;
+
+    // Initialize start node
+    gScore[startNodeIndex] = startTime;
+    priorityQueue.push({startNodeIndex, 0.0});
+
+    while (!priorityQueue.empty())
+    {
+        int currentIndex = priorityQueue.top().first;
+        priorityQueue.pop();
+
+        if (currentIndex == targetNodeIndex)
+            break;
+
+        if (closedSet.find(currentIndex) != closedSet.end())
+            continue;
+
+        closedSet.insert(currentIndex);
+
+        // Iterate over neighbors
+        for (const auto& path : graph_[currentIndex].paths)
+        {
+            int neighborIndex = _pathList[path].targetNodeIndex;
+
+            if (closedSet.find(neighborIndex) != closedSet.end())
+                continue;
+
+            // Compute gScore (cost to reach this neighbor)
+            double density = _pathList[path].densities[gScore[currentIndex]/intervalTime];
+            auto diagramRes = trafficDiagrammFunctionTriangular(density);
+            double pathCost = ((_pathList[path].distanceLength.AsMeter() / 1000.0) / (trafficDiagrammFunctionTriangular(density))) * 60; // в минутах
+            double tentativeGScore = gScore[currentIndex] + pathCost;
+
+            double h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
+
+            // Check if this path to neighbor is better
+            if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
+            {
+                gScore[neighborIndex] = tentativeGScore;
+                double fScore = tentativeGScore + h; // A* cost function
+
+                priorityQueue.push({neighborIndex, fScore});
+                previous[neighborIndex] = currentIndex;
+            }
+        }
+    }
+
+    if (previous.find(targetNodeIndex) == previous.end())
+    {
+        std::cout << "No path found!" << std::endl;
+        return {};
+    }
+
+    std::vector<int> path;
+    for (int at = targetNodeIndex; at != startNodeIndex; at = previous[at])
+    {
+        path.push_back(at);
+    }
+    path.push_back(startNodeIndex);
+    std::reverse(path.begin(), path.end());
+
+    std::cout << "Path found: ";
+    for (int node : path)
+    {
+        std::cout << node << "Time:" << gScore[node] << " -> ";
+
+    }
+    return path;
+}
+
 double Router::trafficDiagrammFunctionTriangular(double p)
 {
     double qc = 1600;
@@ -196,7 +281,7 @@ double Router::trafficDiagrammFunctionTriangular(double p)
     if (p <= pc) // km/h
         return vf;
     else
-        return qc * (1 - (p - pc)/(pj - pc)) / p;
+        return qc * ((1 - ((p - pc)/(pj - pc))) / p);
 }
 
 

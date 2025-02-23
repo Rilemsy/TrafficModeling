@@ -25,20 +25,20 @@ public:
     };
     ~GraphicsScene(){};
 
-    void setMap(QPixmap *value);
-    void setView(QGraphicsView *view) { view_ = view; }
-    void clearMap();
-    void setProjections(osmscout::MercatorProjection *projection)
+    void setMap         (QPixmap *value);
+    void setView        (QGraphicsView *view) { view_ = view; }
+    void clearMap       ();
+    void setProjections (osmscout::MercatorProjection *projection)
     {
         projection_ = projection;
     }
-    void paintDots(std::vector<Node>* graph);
-    void paintPath(std::vector<Node>* graph, const std::vector<int>&);
+    void paintDots      (std::vector<Node>* graph);
+    void paintPath      (std::vector<Node>* graph, const std::vector<int>&);
 
 private:
-    QGraphicsPixmapItem pixmapItem_;
-    QGraphicsView *view_;
-    osmscout::MercatorProjection *projection_;
+    QGraphicsPixmapItem             pixmapItem_;
+    QGraphicsView*                  view_;
+    osmscout::MercatorProjection*   projection_;
 };
 
 #endif // GRAPHICSSCENE_H

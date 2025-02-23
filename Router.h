@@ -7,6 +7,7 @@
 #include "DrawMap.h"
 #include "CustomStructures.h"
 
+
 class Router
 {
 public:
@@ -14,21 +15,23 @@ public:
     std::vector<Node> &getGraph() { return graph_; }
     std::vector<Path> &getPathList() {return _pathList;}
 
-    void LoadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
+    void LoadDataNodes              (const Arguments &args, const osmscout::Distance &maxRange,
                        osmscout::GeoCoord coord);
-    void SetupGraphFromNodes();
-    void OpenFile(const Arguments &args);
-    void generateDensities();
-    std::vector<int> findPathAStar(int startNodeIndex, int targetNodeIndex);
+    void SetupGraphFromNodes        ();
+    void OpenFile                   (const Arguments &args);
+    void generateDensities(int intervalTime);
+    std::vector<int> findPathAStar  (int startNodeIndex, int targetNodeIndex);
+    std::vector<int> findPathAStarTime  (int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
     double trafficDiagrammFunctionTriangular(double density);
 
 private:
-    std::vector<osmscout::RouteNode> NodeList_;
-    osmscout::FileScanner routeReader_;
-    osmscout::Vehicle vehicle_ = osmscout::vehicleCar;
-    std::vector<Node> graph_;
-    std::vector<Path> _pathList;
-    uint32_t nodeCount_;
+    std::vector<osmscout::RouteNode>    NodeList_;
+    osmscout::FileScanner               routeReader_;
+    osmscout::Vehicle                   vehicle_ = osmscout::vehicleCar;
+    std::vector<Node>                   graph_;
+    std::vector<Path>                   _pathList;
+    uint32_t                            nodeCount_;
+    const int                           TIME_RANGE = 1440;  // в минутах
 };
 
 #endif // ROUTER_H

@@ -21,6 +21,9 @@ public:
     void generateDensities();
     void calculatePath();
     void initDensities();
+    bool eventFilter(QObject *object, QEvent *e);
+    void setMapZoom(double zoom);
+    void placeCars(int amount);
 
 private:
     Router*             router_;
@@ -31,8 +34,8 @@ private:
     Arguments           args_;
     QPainter*           painter_;
     QPixmap*            pixmap_;
-    std::vector<Node>*  graphRef;
-    std::vector<Path>*  pathListRef;
+    std::vector<Node>*  _graphRef;
+    std::vector<Path>*  _pathListRef;
     double zoom = 1;
 
     unsigned int    _modelingTime = 240;  // в минутах

@@ -14,6 +14,8 @@
 #include <QVBoxLayout>
 #include <QRadioButton>
 #include <QLabel>
+#include <QRandomGenerator>
+#include <QFile>
 
 #include <queue>
 #include <unordered_set>
@@ -27,6 +29,9 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     //ui->setupUi(this);
 
     router_ = new Router();
+    QFile file("output.txt");
+    if (file.exists())
+        file.remove();
 
     scene_ = new GraphicsScene();
     auto screenGeometry = QApplication::primaryScreen()->geometry();
@@ -43,6 +48,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     //setCentralWidget(graphicsView);
     graphicsView->setRenderHint(QPainter::Antialiasing); // Enable smooth rendering
     graphicsView->setDragMode(QGraphicsView::ScrollHandDrag); // Enable drag mode
+    graphicsView->viewport()->installEventFilter(this);
 
     QGroupBox* timeGroupBox = new QGroupBox(this);
     QGridLayout* timeLayout = new QGridLayout;
@@ -111,15 +117,16 @@ void MainWindow::paintPoint()
     router_->SetupGraphFromNodes();
 
     //auto& graph = router_->getGraph();
-    graphRef = &router_->getGraph();
-    pathListRef = &router_->getPathList();
+    _graphRef = &router_->getGraph();
+    _pathListRef = &router_->getPathList();
     router_->generateDensities(15);
-    scene_->paintDots(graphRef);
+    scene_->paintDots(_graphRef);
 
 
     //const auto& path = router_->findPathAStar(5,98);
-    const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
-    scene_->paintPath(graphRef, path);
+    // const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
+    // scene_->paintPath(_graphRef, path);
+    placeCars(24);
 }
 
 void MainWindow::generateDensities()
@@ -137,6 +144,62 @@ void MainWindow::calculatePath()
 {
     auto compare = [](std::pair<int , double> a, std::pair<int , double> b) { return a.second < b.second; };
     std::priority_queue<std::pair<int , double>, std::vector<std::pair<int , double>>, decltype(compare)> openSet(compare);
+}
+
+void MainWindow::setMapZoom(double zoom)
+{
+    scene_->clearMap();
+    args_.zoom.SetMagnification(args_.zoom.GetMagnification() * zoom);
+    MapData_.projection.Set(args_.center, args_.angle.AsRadians(), args_.zoom,
+                            args_.dpi, args_.width, args_.height);
+    delete painter_;
+    delete pixmap_;
+    pixmap_ = new QPixmap(static_cast<int>(args_.width),
+                          static_cast<int>(args_.height));
+    painter_ = new QPainter(pixmap_);
+    osmscout::MapPainterQt mapPainter(MapData_.styleConfig);
+    MapData_.LoadData();
+    if (mapPainter.DrawMap(MapData_.projection, MapData_.drawParameter,
+                           MapData_.data, painter_))
+    {
+        scene_->setMap(pixmap_);
+    }
+}
+
+bool MainWindow::eventFilter(QObject *object, QEvent *e)
+{
+    if (object == graphicsView->viewport() && e->type() == QEvent::Wheel)
+    {
+        auto event = static_cast<QWheelEvent *>(e);
+        if (event->modifiers().testFlag(Qt::ControlModifier))
+        {
+            double scaleZoom = 1.15;
+            zoom *= scaleZoom;
+            if (event->angleDelta().y() > 0)
+            {
+                setMapZoom(scaleZoom);
+            }
+            else if (event->angleDelta().y() < 0)
+            {
+                setMapZoom(1.0 / scaleZoom);
+            }
+            //event->accept();
+            return true;
+        }
+    }
+    return false;
+}
+
+void MainWindow::placeCars(int amount)
+{
+    QRandomGenerator random(1234);
+    int size = _graphRef->size();
+
+    for (int i = 0; i < amount; i++)
+    {
+        const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
+        scene_->paintPath(_graphRef, path);
+    }
 }
 
 MainWindow::~MainWindow()

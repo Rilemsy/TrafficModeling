@@ -7,7 +7,8 @@ struct Path
 {
     osmscout::Distance distanceLength;
     osmscout::ObjectFileRef fileRef;
-    size_t targetNodeIndex;
+    unsigned int startNodeIndex;            // for paint paths indexes
+    unsigned int targetNodeIndex;
     double cost;
     std::vector<double> densities;
 };

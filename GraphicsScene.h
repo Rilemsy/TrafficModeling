@@ -32,8 +32,11 @@ public:
     {
         projection_ = projection;
     }
+
     void paintDots      (std::vector<Node>* graph);
     void paintPath      (std::vector<Node>* graph, const std::vector<int>&);
+    void paintAllPathIndexes(std::vector<Node>* graph, std::vector<Path>* pathList);
+    void paintAllNodeIndexes(std::vector<Node>* graph);
 
 private:
     QGraphicsPixmapItem             pixmapItem_;

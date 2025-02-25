@@ -1,5 +1,7 @@
 #include "GraphicsScene.h"
 
+#include <QGraphicsTextItem>
+
 #define BRUSH_SIZE 20
 
 void GraphicsScene::setMap(QPixmap *value)
@@ -64,3 +66,41 @@ void GraphicsScene::paintPath(std::vector<Node>* graph, const std::vector<int>& 
 
     std::cout << "\nPath Length: " << pathLength << std::endl;
 }
+
+void GraphicsScene::paintAllPathIndexes(std::vector<Node>* graph, std::vector<Path>* pathList)
+{
+    int i = 0;
+    for (const auto& path : *pathList)
+    {
+        osmscout::Vertex2D dataFirstDot;
+        projection_->GeoToPixel((*graph)[path.startNodeIndex].point.GetCoord(), dataFirstDot);
+        osmscout::Vertex2D dataSecondDot;
+        projection_->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
+        osmscout::Vertex2D dataResultDot((dataFirstDot.GetX()+dataSecondDot.GetX())/2,
+                                         (dataFirstDot.GetY()+dataSecondDot.GetY())/2);
+        //addText("Text")
+        QGraphicsTextItem *text = addText(QString::number(i));
+        if (path.startNodeIndex < path.targetNodeIndex)
+        {
+            text->setPos(dataResultDot.GetX() -  35, dataResultDot.GetY()+ 5 - BRUSH_SIZE / 4);
+        }
+        else
+            text->setPos(dataResultDot.GetX(), dataResultDot.GetY()- 5 + BRUSH_SIZE / 4);
+        i++;
+    }
+}
+
+void GraphicsScene::paintAllNodeIndexes(std::vector<Node>* graph)
+{
+    int i = 0;
+    for (const auto& node : *graph)
+    {
+        osmscout::Vertex2D dataFirstDot;
+        projection_->GeoToPixel(node.point.GetCoord(), dataFirstDot);
+        QGraphicsTextItem *text = addText(QString::number(i));
+        text->setDefaultTextColor(QColor(255,0,0));
+        text->setPos(dataFirstDot.GetX(), dataFirstDot.GetY()- 5 + BRUSH_SIZE / 4);
+        i++;
+    }
+}
+

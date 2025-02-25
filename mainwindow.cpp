@@ -200,6 +200,8 @@ void MainWindow::placeCars(int amount)
         const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
         scene_->paintPath(_graphRef, path);
     }
+    scene_->paintAllPathIndexes(_graphRef, _pathListRef);
+    scene_->paintAllNodeIndexes(_graphRef);
 }
 
 MainWindow::~MainWindow()

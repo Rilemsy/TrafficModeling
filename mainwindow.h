@@ -25,6 +25,8 @@ public:
     void setMapZoom(double zoom);
     void placeCars(int amount);
 
+
+
 private:
     Router*             router_;
     QGraphicsView*      graphicsView;

@@ -74,7 +74,7 @@ void Router::SetupGraphFromNodes()
             }
             Path path;
             path.distanceLength = routePath.distance;
-            //path.startNodeIndex = graph_.size();
+            path.startNodeIndex = graph_.size();
             path.targetNodeIndex = idToIndexMap[routePath.id];
             //path.flags = routePath.flags;
             path.fileRef = routeNode.objects[routePath.objectIndex].object;

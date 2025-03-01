@@ -277,20 +277,32 @@ std::vector<int> Router::findPathAStarTime  (int startNodeIndex, int targetNodeI
 
     std::cout << "Route found: ";
 
-    QFile file("output.txt");
+    QFile file("output.csv");
 
     if (file.open(QFile::WriteOnly | QFile::Append))
     {
         QTextStream out(&file);
-        for (int node : route)
+        out << "Time,Node,Path,Density,Length\n";
+
+        int size = route.size();
+        for (int i = 0; i < size; i++)
         {
-            out <<"Node: " << node << ", Time: " << gScore[node] << " -> ";
+            if (i != size -1)
+                out << gScore[route[i]] << "," << route[i] << "," << paths[i].first << "," << paths[i].second << "," <<
+                    _pathList[paths[i].first].distanceLength.AsMeter() / 1000 << "\n";
+            else
+                out << gScore[route[i]] << "," << route[i] << "," << "-" << "," << "-" << ",-" << "\n";
         }
-        out << "\n";
-        for (auto path : paths)
-        {
-            out << "Path: " << path.first << ", Density: " << path.second << " -> ";
-        }
+
+        // for (int node : route)
+        // {
+        //     out <<"Node: " << node << ", Time: " << gScore[node] << " -> ";
+        // }
+        // out << "\n";
+        // for (auto path : paths)
+        // {
+        //     out << "Path: " << path.first << ", Density: " << path.second << " -> ";
+        // }
         out << "\n\n";
     }
     return route;

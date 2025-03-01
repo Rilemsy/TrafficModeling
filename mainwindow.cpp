@@ -29,7 +29,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     //ui->setupUi(this);
 
     router_ = new Router();
-    QFile file("output.txt");
+    QFile file("output.csv");
     if (file.exists())
         file.remove();
 
@@ -60,7 +60,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QLineEdit* timeIntervalLineEdit = new QLineEdit(QString::number(_intervalTime),this);
     //timeIntervalLineEdit->setPlaceholderText("Интервал времени");  // в минутах
     QPushButton* increaseTimeButton = new QPushButton("Увеличить время",this);
-
+    QPushButton* addCar = new QPushButton("Добавить автомобиль",this);
     // modelingTimeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // timeIntervalLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -72,6 +72,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(timeIntervalLineEdit,2,1);
     timeLayout->addWidget(modelingTimeLabel,3,0,1,2);
     timeLayout->addWidget(increaseTimeButton,4,0,1,2);
+    timeLayout->addWidget(addCar, 5,0,1,2);
     timeLayout->setColumnStretch(timeLayout->columnCount(),1);
     timeLayout->setRowStretch(timeLayout->rowCount(),1);
     //timeLayout->addStretch(1);
@@ -92,6 +93,11 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         _modelingTime += _intervalTime;
         modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
+    });
+
+    connect(addCar, &QPushButton::clicked, [this]
+    {
+        this->placeCars(1);
     });
 
 }
@@ -122,11 +128,14 @@ void MainWindow::paintPoint()
     router_->generateDensities(15);
     scene_->paintDots(_graphRef);
 
+    scene_->paintAllPathIndexes(_graphRef, _pathListRef);
+    scene_->paintAllNodeIndexes(_graphRef);
 
     //const auto& path = router_->findPathAStar(5,98);
     // const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
     // scene_->paintPath(_graphRef, path);
-    placeCars(24);
+
+    //placeCars(24);
 }
 
 void MainWindow::generateDensities()
@@ -197,11 +206,11 @@ void MainWindow::placeCars(int amount)
 
     for (int i = 0; i < amount; i++)
     {
-        const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
+        //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
+        const auto& path = router_->findPathAStarTime(25,78,_startTimeLineEdit->text().toInt(),_intervalTime);
         scene_->paintPath(_graphRef, path);
     }
-    scene_->paintAllPathIndexes(_graphRef, _pathListRef);
-    scene_->paintAllNodeIndexes(_graphRef);
+
 }
 
 MainWindow::~MainWindow()

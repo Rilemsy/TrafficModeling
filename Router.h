@@ -12,17 +12,19 @@ class Router
 {
 public:
     Router();
-    std::vector<Node> &getGraph() { return graph_; }
-    std::vector<Path> &getPathList() {return _pathList;}
+    std::vector<Node>&  getGraph() { return graph_; }
+    std::vector<Path>&  getPathList() {return _pathList;}
 
-    void LoadDataNodes              (const Arguments &args, const osmscout::Distance &maxRange,
-                       osmscout::GeoCoord coord);
-    void SetupGraphFromNodes        ();
-    void OpenFile                   (const Arguments &args);
-    void generateDensities(int intervalTime);
-    std::vector<int> findPathAStar  (int startNodeIndex, int targetNodeIndex);
-    std::vector<int> findPathAStarTime  (int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
-    double trafficDiagrammFunctionTriangular(double density);
+    void                LoadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
+                            osmscout::GeoCoord coord);
+    void                SetupGraphFromNodes();
+    void                OpenFile(const Arguments &args);
+    void                generateDensities(int intervalTime);
+    std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex);
+    std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
+    std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex);
+    std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
+    double              trafficDiagrammFunctionTriangular(double density);
 
 private:
     std::vector<osmscout::RouteNode>    NodeList_;

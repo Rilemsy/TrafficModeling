@@ -85,6 +85,12 @@ void Router::SetupGraphFromNodes()
         }
         graph_.push_back(node);
     }
+
+    // QFile file("allPaths.csv");
+    // if (file.exists())
+    //     file.remove();
+
+
 }
 void Router::OpenFile(const Arguments &args)
 {
@@ -106,16 +112,14 @@ void Router::generateDensities(int intervalTime)
     {
         for (int i = 0; i < intervalsCount; i++)
         {
-            path.densities.push_back(gauseFunction(i,90,8,2.4,110,18,3.2));
+            //path.densities.push_back(gauseFunction(i,90,8,2.4,110,18,3.2));
+            path.densities.push_back(0.0);
         }
     }
 }
 
 std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
 {
-    //int FIRST_DENSITY = 0;
-    //int MAX_SPEED = 80;
-
     using NodeCostPair = std::pair<int, double>;
 
     auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
@@ -190,7 +194,7 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
     return path;
 }
 
-std::vector<int> Router::findPathAStarTime  (int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime)
+std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime)
 {
     int MAX_SPEED = 80;
 
@@ -231,9 +235,9 @@ std::vector<int> Router::findPathAStarTime  (int startNodeIndex, int targetNodeI
                 continue;
 
             // Compute gScore (cost to reach this neighbor)
-            double density = _pathList[pathIndex].densities[gScore[currentIndex]/intervalTime];
+            double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
             auto diagramRes = trafficDiagrammFunctionTriangular(density);
-            double pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (trafficDiagrammFunctionTriangular(density))) * 60; // в минутах
+            double pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
             double tentativeGScore = gScore[currentIndex] + pathCost;
 
             double h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
@@ -307,6 +311,190 @@ std::vector<int> Router::findPathAStarTime  (int startNodeIndex, int targetNodeI
     }
     return route;
 }
+
+std::vector<int> Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex)
+{
+    using NodeCostPair = std::pair<int, double>;
+
+    // Comparator for a min-heap based on cost
+    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+        return a.second > b.second;
+    };
+
+    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::unordered_map<int, double> gScore;  // Cost to reach each node (in km or time)
+    std::unordered_map<int, int> previous;     // For path reconstruction: maps node to its predecessor
+    std::set<int> closedSet;
+
+    gScore[startNodeIndex] = 0.0;
+    priorityQueue.push({startNodeIndex, 0.0});
+
+    while (!priorityQueue.empty())
+    {
+        int currentIndex = priorityQueue.top().first;
+        double currentCost = priorityQueue.top().second;
+        priorityQueue.pop();
+
+        if (currentIndex == targetNodeIndex)
+            break;
+
+        if (closedSet.find(currentIndex) != closedSet.end())
+            continue;
+
+        closedSet.insert(currentIndex);
+
+        // Iterate over all neighbor paths from current node
+        for (const auto &pathIndex : graph_[currentIndex].paths)
+        {
+            int neighborIndex = _pathList[pathIndex].targetNodeIndex;
+            if (closedSet.find(neighborIndex) != closedSet.end())
+                continue;
+
+            // Calculate cost to reach neighbor from current node
+            double pathCost = _pathList[pathIndex].distanceLength.AsMeter() / 1000.0; // Distance in kilometers
+            double tentativeGScore = currentCost + pathCost;
+
+            // Update cost if new path is better
+            if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
+            {
+                gScore[neighborIndex] = tentativeGScore;
+                priorityQueue.push({neighborIndex, tentativeGScore});
+                previous[neighborIndex] = currentIndex;
+            }
+        }
+    }
+
+    // Reconstruct path from target to start
+    std::vector<int> path;
+    if (previous.find(targetNodeIndex) == previous.end())
+        return path;
+
+    int node = targetNodeIndex;
+    while (node != startNodeIndex)
+    {
+        path.push_back(node);
+        node = previous[node];
+    }
+    path.push_back(startNodeIndex);
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
+std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime)
+{
+    using NodeCostPair = std::pair<int, double>;
+
+    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+        return a.second > b.second;
+    };
+
+    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::unordered_map<int, double> gScore;         // цена по времени
+    std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
+    std::set<int> closedSet;
+
+    // Initialize start node
+    gScore[startNodeIndex] = startTime;
+    priorityQueue.push({startNodeIndex, 0.0});
+
+    while (!priorityQueue.empty())
+    {
+        int currentIndex = priorityQueue.top().first;
+        priorityQueue.pop();
+
+        if (currentIndex == targetNodeIndex)
+            break;
+
+        if (closedSet.find(currentIndex) != closedSet.end())
+            continue;
+
+        closedSet.insert(currentIndex);
+
+        // Iterate over neighbors
+        for (const auto pathIndex : graph_[currentIndex].paths)
+        {
+            int neighborIndex = _pathList[pathIndex].targetNodeIndex;
+
+            if (closedSet.find(neighborIndex) != closedSet.end())
+                continue;
+
+            // Compute gScore (cost to reach this neighbor)
+            double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
+            auto diagramRes = trafficDiagrammFunctionTriangular(density);
+            double pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
+            double tentativeGScore = gScore[currentIndex] + pathCost;
+
+            //double h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
+
+            // Check if this path to neighbor is better
+            if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
+            {
+                gScore[neighborIndex] = tentativeGScore;
+
+                priorityQueue.push({neighborIndex, tentativeGScore});
+                previous[neighborIndex].first = currentIndex;
+                previous[neighborIndex].second = pathIndex;
+            }
+        }
+    }
+
+    if (previous.find(targetNodeIndex) == previous.end())
+    {
+        std::cout << "No path found!" << std::endl;
+        return {};
+    }
+
+    std::vector<int> route;
+    std::vector<std::pair<int,double>> paths;
+
+    int numberOfCars = 1;
+    for (int at = targetNodeIndex; at != startNodeIndex; )
+    {
+
+        auto curPathIndex = previous[at].second;
+        _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime] += numberOfCars /
+                                                                                        (_pathList[curPathIndex].distanceLength.AsMeter()/1000);
+        route.push_back(at);
+        paths.push_back({curPathIndex, _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime]});
+        at = previous[at].first;
+    }
+    route.push_back(startNodeIndex);
+    std::reverse(route.begin(), route.end());
+    std::reverse(paths.begin(), paths.end());
+
+    std::cout << "Route found: ";
+
+    QFile file("output.csv");
+
+    if (file.open(QFile::WriteOnly | QFile::Append))
+    {
+        QTextStream out(&file);
+        out << "Time,Node,Path,Density,Length\n";
+
+        int size = route.size();
+        for (int i = 0; i < size; i++)
+        {
+            if (i != size -1)
+                out << gScore[route[i]] << "," << route[i] << "," << paths[i].first << "," << paths[i].second << "," <<
+                    _pathList[paths[i].first].distanceLength.AsMeter() / 1000 << "\n";
+            else
+                out << gScore[route[i]] << "," << route[i] << "," << "-" << "," << "-" << ",-" << "\n";
+        }
+
+        // for (int node : route)
+        // {
+        //     out <<"Node: " << node << ", Time: " << gScore[node] << " -> ";
+        // }
+        // out << "\n";
+        // for (auto path : paths)
+        // {
+        //     out << "Path: " << path.first << ", Density: " << path.second << " -> ";
+        // }
+        out << "\n\n";
+    }
+    return route;
+}
+
 
 double Router::trafficDiagrammFunctionTriangular(double p)
 {

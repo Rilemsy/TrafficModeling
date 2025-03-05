@@ -41,6 +41,6 @@ private:
     double zoom = 1;
 
     unsigned int    _modelingTime = 240;  // в минутах
-    double          _intervalTime = 60;
+    double          _intervalTime = 1;
 };
 #endif // MAINWINDOW_H

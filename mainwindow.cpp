@@ -117,8 +117,8 @@ void MainWindow::SetData()
 
 void MainWindow::paintPoint()
 {
-    osmscout::GeoCoord pointFrom(55.51882, 42.07721);
-    osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.50585, 42.06659));
+    osmscout::GeoCoord pointFrom(55.6565, 41.8260);
+    osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.6876, 42.6846));
     router_->LoadDataNodes(args_, dist, pointFrom);
     router_->SetupGraphFromNodes();
 
@@ -128,13 +128,16 @@ void MainWindow::paintPoint()
     router_->generateDensities(15);
     scene_->paintDots(_graphRef);
 
-    scene_->paintAllPathIndexes(_graphRef, _pathListRef);
-    scene_->paintAllNodeIndexes(_graphRef);
+    //scene_->paintAllPathIndexes(_graphRef, _pathListRef);
+    //scene_->paintAllNodeIndexes(_graphRef);
 
     //const auto& path = router_->findPathAStar(5,98);
     // const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
     // scene_->paintPath(_graphRef, path);
 
+    //onst auto& path = router_->findPathAStar(844,2);
+    //const auto& path = router_->findPathDijkstra(844,2);
+    //scene_->paintPath(_graphRef, path);
     //placeCars(24);
 }
 
@@ -207,7 +210,8 @@ void MainWindow::placeCars(int amount)
     for (int i = 0; i < amount; i++)
     {
         //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
-        const auto& path = router_->findPathAStarTime(25,78,_startTimeLineEdit->text().toInt(),_intervalTime);
+        //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
+        const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         scene_->paintPath(_graphRef, path);
     }
 

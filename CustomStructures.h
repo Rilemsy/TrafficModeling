@@ -10,7 +10,7 @@ struct Path
     unsigned int startNodeIndex;            // for paint paths indexes
     unsigned int targetNodeIndex;
     double cost;
-    std::vector<double> densities;
+    std::vector<float> densities;
 };
 
 struct Node

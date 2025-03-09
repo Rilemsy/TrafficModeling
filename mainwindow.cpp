@@ -125,8 +125,10 @@ void MainWindow::paintPoint()
     //auto& graph = router_->getGraph();
     _graphRef = &router_->getGraph();
     _pathListRef = &router_->getPathList();
-    router_->generateDensities(15);
+    router_->generateDensities(_intervalTime);
     scene_->paintDots(_graphRef);
+
+    scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
     //scene_->paintAllPathIndexes(_graphRef, _pathListRef);
     //scene_->paintAllNodeIndexes(_graphRef);
@@ -212,8 +214,9 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
-        scene_->paintPath(_graphRef, path);
+        //scene_->paintPath(_graphRef, path);
     }
+    scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
 }
 

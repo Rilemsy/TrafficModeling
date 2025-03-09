@@ -19,7 +19,7 @@ public:
                             osmscout::GeoCoord coord);
     void                SetupGraphFromNodes();
     void                OpenFile(const Arguments &args);
-    void                generateDensities(int intervalTime);
+    void                generateDensities(double intervalTime);
     std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex);
     std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
     std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex);

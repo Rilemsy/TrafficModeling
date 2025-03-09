@@ -104,3 +104,42 @@ void GraphicsScene::paintAllNodeIndexes(std::vector<Node>* graph)
     }
 }
 
+void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime)
+{
+    QPair<qreal , qreal > prevNodePixels;
+
+    for (const auto& path : *pathList)
+    {
+        QColor color;
+
+        //color = QColor(204, 0, 0, 200);
+
+        osmscout::Vertex2D dataFirstDot;
+        projection_->GeoToPixel((*graph)[path.startNodeIndex].point.GetCoord(), dataFirstDot);
+
+        // addEllipse(dataFirstDot.GetX() - BRUSH_SIZE / 4, dataFirstDot.GetY() - 5,
+        //            BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
+
+
+
+        osmscout::Vertex2D dataSecondDot;
+        projection_->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
+
+        float density = path.densities[std::floor(currentTime/intervalTime)];
+
+        if (density < 20)
+            color = QColor(0,255,0);
+        else if (density < 70)
+            color = QColor(255,255,0);
+        else if (density < 120)
+            color = QColor(255,128,0);
+        else
+            color = QColor(255,0,0);
+
+        QPen pen(color);
+        pen.setWidth(3);
+
+        addLine(dataFirstDot.GetX() - BRUSH_SIZE / 4 + BRUSH_SIZE / 4, dataFirstDot.GetY() - 5 + BRUSH_SIZE / 4,
+                dataSecondDot.GetX() - BRUSH_SIZE / 4 + BRUSH_SIZE / 4, dataSecondDot.GetY() - 5 + BRUSH_SIZE / 4, pen);
+    }
+}

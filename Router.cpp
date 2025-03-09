@@ -102,12 +102,12 @@ void Router::OpenFile(const Arguments &args)
     NodeList_.reserve(nodeCount_);
 }
 
-void Router::generateDensities(int intervalTime)
+void Router::generateDensities(double intervalTime)
 {
     auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
     { return rPeak1*exp(-(((t-tPeak1)*(t-tPeak1))/(2*sPeak1*sPeak1))) +  rPeak2*exp(-(((t-tPeak2)*(t-tPeak2))/(2*sPeak2*sPeak2))); };
     //int time = 0; // in hours
-    int intervalsCount = TIME_RANGE / intervalTime;
+    int intervalsCount = double(TIME_RANGE) / intervalTime;
     for (auto& path : _pathList)
     {
         for (int i = 0; i < intervalsCount; i++)
@@ -390,7 +390,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
 
     std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;         // цена по времени
-    std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
+    std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс предыдущего узла, индекс ребра
     std::set<int> closedSet;
 
     // Initialize start node
@@ -452,7 +452,9 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
     {
 
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime] += numberOfCars /
+        float pathMomentTime = gScore[previous[at].first]/intervalTime;
+        int indexMomentTime = std::floor(pathMomentTime);
+        _pathList[curPathIndex].densities[indexMomentTime] += numberOfCars /
                                                                                         (_pathList[curPathIndex].distanceLength.AsMeter()/1000);
         route.push_back(at);
         paths.push_back({curPathIndex, _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime]});

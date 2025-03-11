@@ -242,6 +242,7 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
 
             double h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
 
+
             // Check if this path to neighbor is better
             if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
             {
@@ -497,6 +498,146 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
     return route;
 }
 
+std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode planningMode, Algorithm algorithm)
+{
+    int MAX_SPEED = 80;
+
+    using NodeCostPair = std::pair<int, double>;
+
+    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+        return a.second > b.second;
+    };
+
+    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::unordered_map<int, double> gScore;         // цена по времени
+    std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
+    std::set<int> closedSet;
+
+    // Initialize start node
+    gScore[startNodeIndex] = startTime;
+    priorityQueue.push({startNodeIndex, 0.0});
+
+    while (!priorityQueue.empty())
+    {
+        int currentIndex = priorityQueue.top().first;
+        priorityQueue.pop();
+
+        if (currentIndex == targetNodeIndex)
+            break;
+
+        if (closedSet.find(currentIndex) != closedSet.end())
+            continue;
+
+        closedSet.insert(currentIndex);
+
+        // Iterate over neighbors
+        for (const auto pathIndex : graph_[currentIndex].paths)
+        {
+            int neighborIndex = _pathList[pathIndex].targetNodeIndex;
+
+            if (closedSet.find(neighborIndex) != closedSet.end())
+                continue;
+
+            double h = 0, pathCost = 0;
+
+            switch (planningMode) {
+            case PlanningMode::OnlyDistance:
+            {
+                pathCost = _pathList[pathIndex].distanceLength.AsMeter() / 1000.0;
+                h = graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
+                break;
+            }
+            case PlanningMode::HistoricalData:
+            case PlanningMode::DriverInfluence:
+            {
+                double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
+                auto diagramRes = trafficDiagrammFunctionTriangular(density);
+                pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
+                h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
+                break;
+            }
+            default:
+                break;
+            }
+
+            // Compute gScore (cost to reach this neighbor)
+
+            double tentativeGScore = gScore[currentIndex] + pathCost;
+
+
+            // Check if this path to neighbor is better
+            if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
+            {
+                gScore[neighborIndex] = tentativeGScore;
+                double fScore = tentativeGScore + h; // A* cost function
+
+                priorityQueue.push({neighborIndex, fScore});
+                previous[neighborIndex].first = currentIndex;
+                previous[neighborIndex].second = pathIndex;
+            }
+        }
+    }
+
+    if (previous.find(targetNodeIndex) == previous.end())
+    {
+        std::cout << "No path found!" << std::endl;
+        return {};
+    }
+
+    std::vector<int> route;
+    std::vector<std::pair<int,double>> paths;
+
+    int numberOfCars = 1;
+    for (int at = targetNodeIndex; at != startNodeIndex; )
+    {
+
+        auto curPathIndex = previous[at].second;
+
+        if (planningMode == PlanningMode::DriverInfluence)
+        {
+            _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime] += numberOfCars /
+                                                                                        (_pathList[curPathIndex].distanceLength.AsMeter()/1000);
+        }
+        route.push_back(at);
+        paths.push_back({curPathIndex, _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime]});
+        at = previous[at].first;
+    }
+    route.push_back(startNodeIndex);
+    std::reverse(route.begin(), route.end());
+    std::reverse(paths.begin(), paths.end());
+
+    std::cout << "Route found: ";
+
+    QFile file("output.csv");
+
+    if (file.open(QFile::WriteOnly | QFile::Append))
+    {
+        QTextStream out(&file);
+        out << "Time,Node,Path,Density,Length\n";
+
+        int size = route.size();
+        for (int i = 0; i < size; i++)
+        {
+            if (i != size -1)
+                out << gScore[route[i]] << "," << route[i] << "," << paths[i].first << "," << paths[i].second << "," <<
+                    _pathList[paths[i].first].distanceLength.AsMeter() / 1000 << "\n";
+            else
+                out << gScore[route[i]] << "," << route[i] << "," << "-" << "," << "-" << ",-" << "\n";
+        }
+
+        // for (int node : route)
+        // {
+        //     out <<"Node: " << node << ", Time: " << gScore[node] << " -> ";
+        // }
+        // out << "\n";
+        // for (auto path : paths)
+        // {
+        //     out << "Path: " << path.first << ", Density: " << path.second << " -> ";
+        // }
+        out << "\n\n";
+    }
+    return route;
+}
 
 double Router::trafficDiagrammFunctionTriangular(double p)
 {

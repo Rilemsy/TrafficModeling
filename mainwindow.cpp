@@ -60,10 +60,12 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QLineEdit* timeIntervalLineEdit = new QLineEdit(QString::number(_intervalTime),this);
     //timeIntervalLineEdit->setPlaceholderText("Интервал времени");  // в минутах
     QPushButton* increaseTimeButton = new QPushButton("Увеличить время",this);
-    QPushButton* addCar = new QPushButton("Добавить автомобиль",this);
+    QPushButton* addCarButton = new QPushButton("Добавить автомобиль",this);
     // modelingTimeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // timeIntervalLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QPushButton* clearMapButton = new QPushButton("Очистить карту");
+
 
     timeLayout->addWidget(startTimeLabel, 1, 0);
     timeLayout->addWidget(timeIntervalLabel, 2, 0);
@@ -72,7 +74,8 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(timeIntervalLineEdit,2,1);
     timeLayout->addWidget(modelingTimeLabel,3,0,1,2);
     timeLayout->addWidget(increaseTimeButton,4,0,1,2);
-    timeLayout->addWidget(addCar, 5,0,1,2);
+    timeLayout->addWidget(addCarButton, 5,0,1,2);
+    timeLayout->addWidget(clearMapButton, 6, 0, 1, 2);
     timeLayout->setColumnStretch(timeLayout->columnCount(),1);
     timeLayout->setRowStretch(timeLayout->rowCount(),1);
     //timeLayout->addStretch(1);
@@ -95,9 +98,13 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
     });
 
-    connect(addCar, &QPushButton::clicked, [this]
+    connect(addCarButton, &QPushButton::clicked, [this]
     {
         this->placeCars(1);
+    });
+    connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
+    {
+        _intervalTime = timeIntervalLineEdit->text().toDouble();
     });
 
 }
@@ -160,10 +167,10 @@ void MainWindow::calculatePath()
     std::priority_queue<std::pair<int , double>, std::vector<std::pair<int , double>>, decltype(compare)> openSet(compare);
 }
 
-void MainWindow::setMapZoom(double zoom)
+void MainWindow::changeMapZoom(double zoomFactor)
 {
     scene_->clearMap();
-    args_.zoom.SetMagnification(args_.zoom.GetMagnification() * zoom);
+    args_.zoom.SetMagnification(args_.zoom.GetMagnification() * zoomFactor);
     MapData_.projection.Set(args_.center, args_.angle.AsRadians(), args_.zoom,
                             args_.dpi, args_.width, args_.height);
     delete painter_;
@@ -188,14 +195,14 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
         if (event->modifiers().testFlag(Qt::ControlModifier))
         {
             double scaleZoom = 1.15;
-            zoom *= scaleZoom;
+            _zoom *= scaleZoom;
             if (event->angleDelta().y() > 0)
             {
-                setMapZoom(scaleZoom);
+                changeMapZoom(scaleZoom);
             }
             else if (event->angleDelta().y() < 0)
             {
-                setMapZoom(1.0 / scaleZoom);
+                changeMapZoom(1.0 / scaleZoom);
             }
             //event->accept();
             return true;
@@ -213,9 +220,15 @@ void MainWindow::placeCars(int amount)
     {
         //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
-        const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
+        //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
+        const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
+
         //scene_->paintPath(_graphRef, path);
     }
+
+    scene_->clearMap();
+    scene_->clear();
+    changeMapZoom(1);
     scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
 }

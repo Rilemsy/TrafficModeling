@@ -1,6 +1,7 @@
 #include "GraphicsScene.h"
 
 #include <QGraphicsTextItem>
+#include <QGraphicsItem>
 
 #define BRUSH_SIZE 20
 
@@ -12,7 +13,10 @@ void GraphicsScene::setMap(QPixmap *value)
     addItem(&pixmapItem_);
 }
 
-void GraphicsScene::clearMap() { QGraphicsScene::removeItem(&pixmapItem_); }
+void GraphicsScene::clearMap() {
+    if (pixmapItem_.scene())
+        QGraphicsScene::removeItem(&pixmapItem_);
+}
 
 void GraphicsScene::paintDots(std::vector<Node>* graph)
 {

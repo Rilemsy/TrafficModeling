@@ -16,14 +16,14 @@ public:
     MainWindow(int argc, char *argv[], double screen, QWidget *parent = nullptr);
     ~MainWindow();
 
-    void SetData();
-    void paintPoint();
-    void generateDensities();
-    void calculatePath();
-    void initDensities();
-    bool eventFilter(QObject *object, QEvent *e);
-    void setMapZoom(double zoom);
-    void placeCars(int amount);
+    void    SetData();
+    void    paintPoint();
+    void    generateDensities();
+    void    calculatePath();
+    void    initDensities();
+    bool    eventFilter(QObject *object, QEvent *e);
+    void    changeMapZoom(double zoomFactor);
+    void    placeCars(int amount);
 
 
 
@@ -38,7 +38,9 @@ private:
     QPixmap*            pixmap_;
     std::vector<Node>*  _graphRef;
     std::vector<Path>*  _pathListRef;
-    double zoom = 1;
+    double _zoom = 1;
+    PlanningMode        _planningMode = PlanningMode::DriverInfluence;
+    Algorithm           _algorithm = Algorithm::AStar;
 
     unsigned int    _modelingTime = 240;  // в минутах
     double          _intervalTime = 15;

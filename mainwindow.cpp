@@ -16,6 +16,7 @@
 #include <QLabel>
 #include <QRandomGenerator>
 #include <QFile>
+#include <QComboBox>
 
 #include <queue>
 #include <unordered_set>
@@ -65,25 +66,32 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // timeIntervalLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     QPushButton* clearMapButton = new QPushButton("Очистить карту");
-
+    QComboBox* modeComboBox = new QComboBox(this);
+    modeComboBox->insertItems(0,{"Только расстояние", "Исторические данные", "Влияние водителей"});
+    modeComboBox->setCurrentIndex(2);
+    // modeComboBox->setEditable(true);
+    // //modeComboBox->lineEdit()->setDisabled(true);
+    // modeComboBox->lineEdit()->setReadOnly(true);
+    // modeComboBox->lineEdit()->setAlignment(Qt::AlignCenter);
 
     timeLayout->addWidget(startTimeLabel, 1, 0);
     timeLayout->addWidget(timeIntervalLabel, 2, 0);
 
-    timeLayout->addWidget(_startTimeLineEdit,1,1);
-    timeLayout->addWidget(timeIntervalLineEdit,2,1);
-    timeLayout->addWidget(modelingTimeLabel,3,0,1,2);
-    timeLayout->addWidget(increaseTimeButton,4,0,1,2);
-    timeLayout->addWidget(addCarButton, 5,0,1,2);
+    timeLayout->addWidget(_startTimeLineEdit, 1, 1);
+    timeLayout->addWidget(timeIntervalLineEdit, 2, 1);
+    timeLayout->addWidget(modelingTimeLabel, 3, 0, 1, 2);
+    timeLayout->addWidget(increaseTimeButton, 4, 0, 1, 2);
+    timeLayout->addWidget(addCarButton, 5, 0, 1, 2);
     timeLayout->addWidget(clearMapButton, 6, 0, 1, 2);
-    timeLayout->setColumnStretch(timeLayout->columnCount(),1);
-    timeLayout->setRowStretch(timeLayout->rowCount(),1);
+    timeLayout->addWidget(modeComboBox, 7, 0, 1, 2);
+    timeLayout->setColumnStretch(timeLayout->columnCount(), 1);
+    timeLayout->setRowStretch(timeLayout->rowCount(), 1);
     //timeLayout->addStretch(1);
 
     timeGroupBox->setLayout(timeLayout);
 
     mainLayout->addWidget(timeGroupBox);
-    mainLayout->addWidget(graphicsView,1);
+    mainLayout->addWidget(graphicsView, 1);
 
     MapData_.OpenDatabase();
     args_ = MapData_.GetArguments();
@@ -102,11 +110,16 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         this->placeCars(1);
     });
+
     connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
     {
         _intervalTime = timeIntervalLineEdit->text().toDouble();
     });
 
+    connect(modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+    {
+        _planningMode = static_cast<PlanningMode>(index);
+    });
 }
 
 void MainWindow::SetData()
@@ -135,10 +148,10 @@ void MainWindow::paintPoint()
     router_->generateDensities(_intervalTime);
     scene_->paintDots(_graphRef);
 
-    scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
+    //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
     //scene_->paintAllPathIndexes(_graphRef, _pathListRef);
-    //scene_->paintAllNodeIndexes(_graphRef);
+    scene_->paintAllNodeIndexes(_graphRef);
 
     //const auto& path = router_->findPathAStar(5,98);
     // const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
@@ -221,7 +234,7 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
-        const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
+        const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, /*_algorithm*/Algorithm::Dijkstra);
 
         //scene_->paintPath(_graphRef, path);
     }
@@ -229,8 +242,8 @@ void MainWindow::placeCars(int amount)
     scene_->clearMap();
     scene_->clear();
     changeMapZoom(1);
-    scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
-
+    //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
+    scene_->paintAllNodeIndexes(_graphRef);
 }
 
 MainWindow::~MainWindow()

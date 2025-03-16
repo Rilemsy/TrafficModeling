@@ -500,7 +500,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
 
 std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode planningMode, Algorithm algorithm)
 {
-    int MAX_SPEED = 80;
+    float MAX_SPEED = 80;
 
     using NodeCostPair = std::pair<int, double>;
 
@@ -553,7 +553,8 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
                 double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
                 auto diagramRes = trafficDiagrammFunctionTriangular(density);
                 pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
-                h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
+                if (algorithm == Algorithm::AStar)
+                    h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / (MAX_SPEED*1000/60);
                 break;
             }
             default:
@@ -590,13 +591,11 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
     int numberOfCars = 1;
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
-
         auto curPathIndex = previous[at].second;
-
         if (planningMode == PlanningMode::DriverInfluence)
         {
             _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime] += numberOfCars /
-                                                                                        (_pathList[curPathIndex].distanceLength.AsMeter()/1000);
+                                                                                (_pathList[curPathIndex].distanceLength.AsMeter()/1000);
         }
         route.push_back(at);
         paths.push_back({curPathIndex, _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime]});

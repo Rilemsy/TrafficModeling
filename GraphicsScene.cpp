@@ -3,6 +3,8 @@
 #include <QGraphicsTextItem>
 #include <QGraphicsItem>
 
+#include <iomanip>
+
 #define BRUSH_SIZE 20
 
 void GraphicsScene::setMap(QPixmap *value)
@@ -128,8 +130,22 @@ void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Pa
 
         osmscout::Vertex2D dataSecondDot;
         projection_->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
+        osmscout::Vertex2D dataResultDot((dataFirstDot.GetX()+dataSecondDot.GetX())/2,
+                                         (dataFirstDot.GetY()+dataSecondDot.GetY())/2);
+
 
         float density = path.densities[std::floor(currentTime/intervalTime)];
+
+        QGraphicsTextItem *text = addText(QString::number(density, 'f', 2));
+        text->setDefaultTextColor(QColor(255,0,0));
+        if (path.startNodeIndex < path.targetNodeIndex)
+        {
+            text->setPos(dataResultDot.GetX() -  35, dataResultDot.GetY()+ 5 - BRUSH_SIZE / 4);
+        }
+        else
+            text->setPos(dataResultDot.GetX(), dataResultDot.GetY()- 5 + BRUSH_SIZE / 4);
+
+        //text->setPos(dataFirstDot.GetX(), dataFirstDot.GetY()- 5 + BRUSH_SIZE / 4);
 
         if (density < 20)
             color = QColor(0,255,0);

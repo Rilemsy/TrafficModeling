@@ -110,6 +110,15 @@ void Router::generateDensities(double intervalTime)
     int intervalsCount = double(TIME_RANGE) / intervalTime;
     for (auto& path : _pathList)
     {
+        if (path.distanceLength.AsMeter() < MIN_PATH_LENGTH)
+        {
+            for (int i = 0; i < intervalsCount; i++)
+            {
+                //path.densities.push_back(gauseFunction(i,90,8,2.4,110,18,3.2));
+                path.densities.push_back(0.0);
+            }
+            continue;
+        }
         for (int i = 0; i < intervalsCount; i++)
         {
             //path.densities.push_back(gauseFunction(i,90,8,2.4,110,18,3.2));
@@ -592,7 +601,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        if (planningMode == PlanningMode::DriverInfluence)
+        if (_pathList[curPathIndex].distanceLength.AsMeter() >= MIN_PATH_LENGTH)
         {
             _pathList[curPathIndex].densities[gScore[previous[at].first]/intervalTime] += numberOfCars /
                                                                                 (_pathList[curPathIndex].distanceLength.AsMeter()/1000);
@@ -644,6 +653,11 @@ double Router::trafficDiagrammFunctionTriangular(double p)
     double pj = 120;
     double pc = 20;
     double vf = 80;
+
+    if (p >= 120)
+    {
+        emit message("Density >= 120");
+    }
 
     if (p <= pc) // km/h
         return vf;

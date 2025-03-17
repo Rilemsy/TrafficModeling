@@ -17,6 +17,7 @@
 #include <QRandomGenerator>
 #include <QFile>
 #include <QComboBox>
+#include <QMessageBox>
 
 #include <queue>
 #include <unordered_set>
@@ -28,7 +29,6 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     MapData_("QMap", argc, argv, screen)
 {
     //ui->setupUi(this);
-
     router_ = new Router();
     QFile file("output.csv");
     if (file.exists())
@@ -65,10 +65,18 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     // modelingTimeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // timeIntervalLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    QPushButton* clearMapButton = new QPushButton("Очистить карту");
+    QPushButton* clearMapButton = new QPushButton("Очистить карту",this);
+    QLabel* modeNameLabel = new QLabel("Режим:", this);
+    QLabel* algorithmNameLabel = new QLabel("Алгоритм:", this);
     QComboBox* modeComboBox = new QComboBox(this);
     modeComboBox->insertItems(0,{"Только расстояние", "Исторические данные", "Влияние водителей"});
     modeComboBox->setCurrentIndex(2);
+    QComboBox* algorithmComboBox = new QComboBox(this);
+    algorithmComboBox->insertItems(0,{"Алгоритм Дийкстры", "A*"});
+    algorithmComboBox->setCurrentIndex(1);
+
+    QLabel* timeMomentLabel = new QLabel("Перейти к моменту времени:", this);
+    QLineEdit* timeMomentLineEdit = new QLineEdit(QString::number(_momentTime),this);
     // modeComboBox->setEditable(true);
     // //modeComboBox->lineEdit()->setDisabled(true);
     // modeComboBox->lineEdit()->setReadOnly(true);
@@ -83,7 +91,12 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(increaseTimeButton, 4, 0, 1, 2);
     timeLayout->addWidget(addCarButton, 5, 0, 1, 2);
     timeLayout->addWidget(clearMapButton, 6, 0, 1, 2);
-    timeLayout->addWidget(modeComboBox, 7, 0, 1, 2);
+    timeLayout->addWidget(modeNameLabel, 7, 0);
+    timeLayout->addWidget(modeComboBox, 7, 1);
+    timeLayout->addWidget(algorithmNameLabel, 8, 0);
+    timeLayout->addWidget(algorithmComboBox, 8, 1);
+    timeLayout->addWidget(timeMomentLabel, 9, 0);
+    timeLayout->addWidget(timeMomentLineEdit, 9, 1);
     timeLayout->setColumnStretch(timeLayout->columnCount(), 1);
     timeLayout->setRowStretch(timeLayout->rowCount(), 1);
     //timeLayout->addStretch(1);
@@ -99,6 +112,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     pixmap_ = new QPixmap(static_cast<int>(args_.width),
                           static_cast<int>(args_.height));
     painter_ = new QPainter(pixmap_);
+    //painter_->setBackground(QBrush(Qt::white));
 
     connect(increaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
     {
@@ -116,9 +130,24 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         _intervalTime = timeIntervalLineEdit->text().toDouble();
     });
 
+    connect(timeMomentLineEdit, &QLineEdit::editingFinished, [this, timeMomentLineEdit]
+    {
+        _momentTime = timeMomentLineEdit->text().toDouble();
+    });
+
     connect(modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
     {
         _planningMode = static_cast<PlanningMode>(index);
+    });
+
+    connect(modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+    {
+        _algorithm = static_cast<Algorithm>(index);
+    });
+
+    connect(router_, &Router::message, [this](QString str)
+    {
+        QMessageBox::warning(this, "Warning", str);
     });
 }
 
@@ -127,6 +156,7 @@ void MainWindow::SetData()
     osmscout::MapPainterQt mapPainter(MapData_.styleConfig);
     osmscout::TypeInfoRef buildingType =
         MapData_.database->GetTypeConfig()->GetTypeInfo("building");
+    pixmap_->fill(Qt::white);
     MapData_.LoadData();
     if (mapPainter.DrawMap(MapData_.projection, MapData_.drawParameter,
                            MapData_.data, painter_))
@@ -151,7 +181,7 @@ void MainWindow::paintPoint()
     //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
     //scene_->paintAllPathIndexes(_graphRef, _pathListRef);
-    scene_->paintAllNodeIndexes(_graphRef);
+    //scene_->paintAllNodeIndexes(_graphRef);
 
     //const auto& path = router_->findPathAStar(5,98);
     // const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
@@ -190,6 +220,7 @@ void MainWindow::changeMapZoom(double zoomFactor)
     delete pixmap_;
     pixmap_ = new QPixmap(static_cast<int>(args_.width),
                           static_cast<int>(args_.height));
+    pixmap_->fill(Qt::white);
     painter_ = new QPainter(pixmap_);
     osmscout::MapPainterQt mapPainter(MapData_.styleConfig);
     MapData_.LoadData();
@@ -228,22 +259,23 @@ void MainWindow::placeCars(int amount)
 {
     QRandomGenerator random(1234);
     int size = _graphRef->size();
-
+    std::vector<int> path;
     for (int i = 0; i < amount; i++)
     {
         //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
-        const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, /*_algorithm*/Algorithm::Dijkstra);
+        //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
+        /*const auto&*/ path = router_->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
 
-        //scene_->paintPath(_graphRef, path);
     }
 
     scene_->clearMap();
     scene_->clear();
     changeMapZoom(1);
-    //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
-    scene_->paintAllNodeIndexes(_graphRef);
+    scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
+    scene_->paintPath(_graphRef, path);
+    //scene_->paintAllNodeIndexes(_graphRef);
 }
 
 MainWindow::~MainWindow()

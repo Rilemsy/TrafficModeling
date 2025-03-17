@@ -37,7 +37,7 @@ public:
     void    paintPath(std::vector<Node>* graph, const std::vector<int>&);
     void    paintAllPathIndexes(std::vector<Node>* graph, std::vector<Path>* pathList);
     void    paintAllNodeIndexes(std::vector<Node>* graph);
-    void    paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime);
+    void    paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime, PlanningMode mode);
 
 private:
     QGraphicsPixmapItem             pixmapItem_;

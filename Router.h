@@ -7,22 +7,14 @@
 #include "DrawMap.h"
 #include "CustomStructures.h"
 
+#include <QObject>
 
-enum class PlanningMode
-{
-    OnlyDistance = 0,
-    HistoricalData,
-    DriverInfluence        // не особо важно, с historicaldata или с нулевыми плотностями
-};
 
-enum class Algorithm
-{
-    Dijkstra = 0,
-    AStar
-};
 
-class Router
+class Router : public QObject
 {
+Q_OBJECT
+
 public:
     Router();
     std::vector<Node>&  getGraph() { return graph_; }
@@ -41,6 +33,9 @@ public:
 
     double              trafficDiagrammFunctionTriangular(double density);
 
+signals:
+    void message(QString str);
+
 private:
     std::vector<osmscout::RouteNode>    NodeList_;
     osmscout::FileScanner               routeReader_;
@@ -50,6 +45,7 @@ private:
     uint32_t                            nodeCount_;
     const int                           TIME_RANGE = 1440;  // 24 часа в минутах
     PlanningMode                        _planningMode = PlanningMode::DriverInfluence;
+    const double                        MIN_PATH_LENGTH = 100;
 };
 
 #endif // ROUTER_H

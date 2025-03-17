@@ -44,5 +44,6 @@ private:
 
     unsigned int    _modelingTime = 240;  // в минутах
     double          _intervalTime = 15;
+    double          _momentTime = _modelingTime;
 };
 #endif // MAINWINDOW_H

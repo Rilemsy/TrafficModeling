@@ -5,6 +5,8 @@
 
 #include <iomanip>
 
+#include <QMessageBox>
+
 #define BRUSH_SIZE 20
 
 void GraphicsScene::setMap(QPixmap *value)
@@ -110,7 +112,7 @@ void GraphicsScene::paintAllNodeIndexes(std::vector<Node>* graph)
     }
 }
 
-void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime)
+void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime, PlanningMode mode)
 {
     QPair<qreal , qreal > prevNodePixels;
 
@@ -135,18 +137,6 @@ void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Pa
 
 
         float density = path.densities[std::floor(currentTime/intervalTime)];
-
-        QGraphicsTextItem *text = addText(QString::number(density, 'f', 2));
-        text->setDefaultTextColor(QColor(255,0,0));
-        if (path.startNodeIndex < path.targetNodeIndex)
-        {
-            text->setPos(dataResultDot.GetX() -  35, dataResultDot.GetY()+ 5 - BRUSH_SIZE / 4);
-        }
-        else
-            text->setPos(dataResultDot.GetX(), dataResultDot.GetY()- 5 + BRUSH_SIZE / 4);
-
-        //text->setPos(dataFirstDot.GetX(), dataFirstDot.GetY()- 5 + BRUSH_SIZE / 4);
-
         if (density < 20)
             color = QColor(0,255,0);
         else if (density < 70)
@@ -155,6 +145,30 @@ void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Pa
             color = QColor(255,128,0);
         else
             color = QColor(255,0,0);
+
+        if (density >= 120)
+        {
+            addEllipse(dataResultDot.GetX(), dataResultDot.GetY()- 5 + BRUSH_SIZE / 4,
+                       BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
+            if (mode == PlanningMode::OnlyDistance)
+            {
+                QMessageBox::warning(view_, "Warning", "Density >= 120");
+            }
+        }
+        else
+        {
+            // QGraphicsTextItem *text = addText(QString::number(density, 'f', 2));
+            // text->setDefaultTextColor(QColor(255,0,0));
+            // if (path.startNodeIndex < path.targetNodeIndex)
+            // {
+            //     text->setPos(dataResultDot.GetX() -  35, dataResultDot.GetY()+ 5 - BRUSH_SIZE / 4);
+            // }
+            // else
+            //     text->setPos(dataResultDot.GetX(), dataResultDot.GetY()- 5 + BRUSH_SIZE / 4);
+        }
+        //text->setPos(dataFirstDot.GetX(), dataFirstDot.GetY()- 5 + BRUSH_SIZE / 4);
+
+
 
         QPen pen(color);
         pen.setWidth(3);

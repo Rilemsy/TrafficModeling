@@ -20,4 +20,17 @@ struct Node
     double cost;
 };
 
+enum class PlanningMode
+{
+    OnlyDistance = 0,
+    HistoricalData,
+    DriverInfluence        // не особо важно, с historicaldata или с нулевыми плотностями
+};
+
+enum class Algorithm
+{
+    Dijkstra = 0,
+    AStar
+};
+
 #endif // CUSTOMSTRUCTURES_H

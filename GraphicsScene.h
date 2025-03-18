@@ -39,10 +39,12 @@ public:
     void    paintAllNodeIndexes(std::vector<Node>* graph);
     void    paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime, PlanningMode mode);
 
+    osmscout::MercatorProjection*   projection_;
+
 private:
     QGraphicsPixmapItem             pixmapItem_;
     QGraphicsView*                  view_;
-    osmscout::MercatorProjection*   projection_;
+
 };
 
 #endif // GRAPHICSSCENE_H

@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <osmscout/projection/MercatorProjection.h>
+
 #include <QMainWindow>
 #include <QLineEdit>
 
@@ -24,18 +26,18 @@ public:
     bool    eventFilter(QObject *object, QEvent *e);
     void    changeMapZoom(double zoomFactor);
     void    placeCars(int amount);
-
+    void    moveMap(osmscout::GeoCoord coord);
 
 
 private:
-    Router*             router_;
-    QGraphicsView*      graphicsView;
+    Router*             _router;
+    QGraphicsView*      _graphicsView;
     QLineEdit*          _startTimeLineEdit;
-    GraphicsScene*      scene_;
-    DrawMapDemo         MapData_;
-    Arguments           args_;
-    QPainter*           painter_;
-    QPixmap*            pixmap_;
+    GraphicsScene*      _scene;
+    DrawMapDemo         _mapData;
+    Arguments           _args;
+    QPainter*           _painter;
+    QPixmap*            _pixmap;
     std::vector<Node>*  _graphRef;
     std::vector<Path>*  _pathListRef;
     double _zoom = 1;

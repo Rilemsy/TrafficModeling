@@ -51,7 +51,6 @@ void GraphicsScene::paintPath(std::vector<Node>* graph, const std::vector<int>& 
 
         osmscout::Vertex2D dataFirstDot;
         projection_->GeoToPixel((*graph)[i].point.GetCoord(), dataFirstDot);
-
         addEllipse(dataFirstDot.GetX() - BRUSH_SIZE / 4, dataFirstDot.GetY() - 5,
                    BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
         QPen pen(QColor(255,0,0));

@@ -26,45 +26,23 @@
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     : QMainWindow(parent),
-    MapData_("QMap", argc, argv, screen)
+    _mapData("QMap", argc, argv, screen)
 {
-    //ui->setupUi(this);
-    router_ = new Router();
+    _router = new Router();
     QFile file("output.csv");
     if (file.exists())
         file.remove();
 
-    scene_ = new GraphicsScene();
-    auto screenGeometry = QApplication::primaryScreen()->geometry();
-    //scene_->setSceneRect(0, 0, 800, 600);
-    scene_->setSceneRect(0, 0, screenGeometry.width(), screenGeometry.height());
-
-    QWidget* centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
-
-    QHBoxLayout* mainLayout = new QHBoxLayout(centralWidget);
-
-
-    graphicsView = new QGraphicsView(scene_, this);
-    //setCentralWidget(graphicsView);
-    graphicsView->setRenderHint(QPainter::Antialiasing); // Enable smooth rendering
-    graphicsView->setDragMode(QGraphicsView::ScrollHandDrag); // Enable drag mode
-    graphicsView->viewport()->installEventFilter(this);
-
     QGroupBox* timeGroupBox = new QGroupBox(this);
     QGridLayout* timeLayout = new QGridLayout;
+
     QLabel* modelingTimeLabel = new QLabel("Время: " + (QString::number(_modelingTime)),timeGroupBox);
     QLabel* startTimeLabel = new QLabel("Время начала поездки:");
     _startTimeLineEdit = new QLineEdit(QString::number(_modelingTime),this);
-    //currentTimeLineEdit->setPlaceholderText("Время начала поездки");
     QLabel* timeIntervalLabel = new QLabel("Интервал времени:");
     QLineEdit* timeIntervalLineEdit = new QLineEdit(QString::number(_intervalTime),this);
-    //timeIntervalLineEdit->setPlaceholderText("Интервал времени");  // в минутах
     QPushButton* increaseTimeButton = new QPushButton("Увеличить время",this);
     QPushButton* addCarButton = new QPushButton("Добавить автомобиль",this);
-    // modelingTimeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    // currentTimeLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    // timeIntervalLineEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     QPushButton* clearMapButton = new QPushButton("Очистить карту",this);
     QLabel* modeNameLabel = new QLabel("Режим:", this);
     QLabel* algorithmNameLabel = new QLabel("Алгоритм:", this);
@@ -77,10 +55,6 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     QLabel* timeMomentLabel = new QLabel("Перейти к моменту времени:", this);
     QLineEdit* timeMomentLineEdit = new QLineEdit(QString::number(_momentTime),this);
-    // modeComboBox->setEditable(true);
-    // //modeComboBox->lineEdit()->setDisabled(true);
-    // modeComboBox->lineEdit()->setReadOnly(true);
-    // modeComboBox->lineEdit()->setAlignment(Qt::AlignCenter);
 
     timeLayout->addWidget(startTimeLabel, 1, 0);
     timeLayout->addWidget(timeIntervalLabel, 2, 0);
@@ -103,15 +77,38 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     timeGroupBox->setLayout(timeLayout);
 
-    mainLayout->addWidget(timeGroupBox);
-    mainLayout->addWidget(graphicsView, 1);
 
-    MapData_.OpenDatabase();
-    args_ = MapData_.GetArguments();
-    scene_->setProjections(&MapData_.projection);
-    pixmap_ = new QPixmap(static_cast<int>(args_.width),
-                          static_cast<int>(args_.height));
-    painter_ = new QPainter(pixmap_);
+    _scene = new GraphicsScene();
+    auto screenGeometry = QApplication::primaryScreen()->geometry();
+    //scene_->setSceneRect(0, 0, 800, 600);
+    _scene->setSceneRect(0, 0, screenGeometry.width(), screenGeometry.height());
+
+    QWidget* centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
+
+    QHBoxLayout* mainLayout = new QHBoxLayout(centralWidget);
+
+
+    _graphicsView = new QGraphicsView(_scene, this);
+    // _graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // _graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    //setCentralWidget(graphicsView);
+    _graphicsView->setRenderHint(QPainter::Antialiasing); // Enable smooth rendering
+    _graphicsView->setDragMode(QGraphicsView::ScrollHandDrag); // Enable drag mode
+    _graphicsView->viewport()->installEventFilter(this);
+
+
+    mainLayout->addWidget(timeGroupBox);
+    mainLayout->addWidget(_graphicsView, 1);
+
+    auto size = _graphicsView->size();
+
+    _mapData.OpenDatabase();
+    _args = _mapData.GetArguments();
+    _scene->setProjections(&_mapData.projection);
+    _pixmap = new QPixmap(static_cast<int>(_args.width),
+                          static_cast<int>(_args.height));
+    _painter = new QPainter(_pixmap);
     //painter_->setBackground(QBrush(Qt::white));
 
     connect(increaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
@@ -145,7 +142,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         _algorithm = static_cast<Algorithm>(index);
     });
 
-    connect(router_, &Router::message, [this](QString str)
+    connect(_router, &Router::message, [this](QString str)
     {
         QMessageBox::warning(this, "Warning", str);
     });
@@ -153,15 +150,15 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
 void MainWindow::SetData()
 {
-    osmscout::MapPainterQt mapPainter(MapData_.styleConfig);
+    osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
     osmscout::TypeInfoRef buildingType =
-        MapData_.database->GetTypeConfig()->GetTypeInfo("building");
-    pixmap_->fill(Qt::white);
-    MapData_.LoadData();
-    if (mapPainter.DrawMap(MapData_.projection, MapData_.drawParameter,
-                           MapData_.data, painter_))
+        _mapData.database->GetTypeConfig()->GetTypeInfo("building");
+    _pixmap->fill(Qt::white);
+    _mapData.LoadData();
+    if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
+                           _mapData.data, _painter))
     {
-        scene_->setMap(pixmap_);
+        _scene->setMap(_pixmap);
     }
 }
 
@@ -169,14 +166,14 @@ void MainWindow::paintPoint()
 {
     osmscout::GeoCoord pointFrom(55.6565, 41.8260);
     osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.6876, 42.6846));
-    router_->LoadDataNodes(args_, dist, pointFrom);
-    router_->SetupGraphFromNodes();
+    _router->LoadDataNodes(_args, dist, pointFrom);
+    _router->SetupGraphFromNodes();
 
     //auto& graph = router_->getGraph();
-    _graphRef = &router_->getGraph();
-    _pathListRef = &router_->getPathList();
-    router_->generateDensities(_intervalTime);
-    scene_->paintDots(_graphRef);
+    _graphRef = &_router->getGraph();
+    _pathListRef = &_router->getPathList();
+    _router->generateDensities(_intervalTime);
+    _scene->paintDots(_graphRef);
 
     //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
@@ -212,28 +209,49 @@ void MainWindow::calculatePath()
 
 void MainWindow::changeMapZoom(double zoomFactor)
 {
-    scene_->clearMap();
-    args_.zoom.SetMagnification(args_.zoom.GetMagnification() * zoomFactor);
-    MapData_.projection.Set(args_.center, args_.angle.AsRadians(), args_.zoom,
-                            args_.dpi, args_.width, args_.height);
-    delete painter_;
-    delete pixmap_;
-    pixmap_ = new QPixmap(static_cast<int>(args_.width),
-                          static_cast<int>(args_.height));
-    pixmap_->fill(Qt::white);
-    painter_ = new QPainter(pixmap_);
-    osmscout::MapPainterQt mapPainter(MapData_.styleConfig);
-    MapData_.LoadData();
-    if (mapPainter.DrawMap(MapData_.projection, MapData_.drawParameter,
-                           MapData_.data, painter_))
+    _scene->clearMap();
+    _args.zoom.SetMagnification(_args.zoom.GetMagnification() * zoomFactor);
+    _mapData.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
+                            _args.dpi, _args.width, _args.height);
+    delete _painter;
+    delete _pixmap;
+    _pixmap = new QPixmap(static_cast<int>(_args.width),
+                          static_cast<int>(_args.height));
+    _pixmap->fill(Qt::white);
+    _painter = new QPainter(_pixmap);
+    osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
+    _mapData.LoadData();
+    if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
+                           _mapData.data, _painter))
     {
-        scene_->setMap(pixmap_);
+        _scene->setMap(_pixmap);
+    }
+}
+
+void MainWindow::moveMap(osmscout::GeoCoord coord)
+{
+    _scene->clearMap();
+    _args.center = coord;
+    _mapData.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
+                            _args.dpi, _args.width, _args.height);
+    delete _painter;
+    delete _pixmap;
+    _pixmap = new QPixmap(static_cast<int>(_args.width),
+                          static_cast<int>(_args.height));
+    _pixmap->fill(Qt::white);
+    _painter = new QPainter(_pixmap);
+    osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
+    _mapData.LoadData();
+    if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
+                           _mapData.data, _painter))
+    {
+        _scene->setMap(_pixmap);
     }
 }
 
 bool MainWindow::eventFilter(QObject *object, QEvent *e)
 {
-    if (object == graphicsView->viewport() && e->type() == QEvent::Wheel)
+    if (object == _graphicsView->viewport() && e->type() == QEvent::Wheel)
     {
         auto event = static_cast<QWheelEvent *>(e);
         if (event->modifiers().testFlag(Qt::ControlModifier))
@@ -252,6 +270,22 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
             return true;
         }
     }
+    if (object == _graphicsView->viewport() && e->type() == QEvent::MouseButtonRelease)
+    {
+        auto event = static_cast<QMouseEvent*>(e);
+        if (event->button() == Qt::RightButton)
+        {
+            auto localPoint = event->localPos();
+            auto widgetPos = event->pos();
+            auto viewportSize = _graphicsView->viewport()->size();
+            auto viewSize = _graphicsView->size();
+            osmscout::GeoCoord coord;
+            _scene->projection_->PixelToGeo(localPoint.x(),localPoint.y(), coord);
+            moveMap(coord);
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -266,15 +300,15 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
-        /*const auto&*/ path = router_->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
+        /*const auto&*/ path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
 
     }
 
-    scene_->clearMap();
-    scene_->clear();
+    _scene->clearMap();
+    _scene->clear();
     changeMapZoom(1);
-    scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
-    scene_->paintPath(_graphRef, path);
+    _scene->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
+    _scene->paintPath(_graphRef, path);
     //scene_->paintAllNodeIndexes(_graphRef);
 }
 

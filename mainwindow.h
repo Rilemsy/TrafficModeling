@@ -5,16 +5,19 @@
 
 #include <QMainWindow>
 #include <QLineEdit>
+#include <QListWidget>
 
 #include "DrawMap.h"
 #include "GraphicsScene.h"
 #include "Router.h"
+#include "CustomStructures.h"
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
+
     MainWindow(int argc, char *argv[], double screen, QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -27,6 +30,7 @@ public:
     void    changeMapZoom(double zoomFactor);
     void    placeCars(int amount);
     void    moveMap(osmscout::GeoCoord coord);
+    void    paintMap();
 
 
 private:
@@ -34,6 +38,7 @@ private:
     QGraphicsView*      _graphicsView;
     QLineEdit*          _startTimeLineEdit;
     GraphicsScene*      _scene;
+    QListWidget*        _optionsList;
     DrawMapDemo         _mapData;
     Arguments           _args;
     QPainter*           _painter;
@@ -43,6 +48,8 @@ private:
     double _zoom = 1;
     PlanningMode        _planningMode = PlanningMode::DriverInfluence;
     Algorithm           _algorithm = Algorithm::AStar;
+    Options             _options;
+    std::vector<int>    _lastRoute;
 
     unsigned int    _modelingTime = 240;  // в минутах
     double          _intervalTime = 15;

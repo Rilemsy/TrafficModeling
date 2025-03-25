@@ -56,6 +56,23 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QLabel* timeMomentLabel = new QLabel("Перейти к моменту времени:", this);
     QLineEdit* timeMomentLineEdit = new QLineEdit(QString::number(_momentTime),this);
 
+    _optionsList = new QListWidget(this);
+    QListWidgetItem* listItem = new QListWidgetItem("Показать номера узлов", _optionsList);
+    listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable);
+    listItem->setCheckState(Qt::Unchecked);
+    listItem = new QListWidgetItem("Показать номера путей", _optionsList);
+    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
+    listItem->setCheckState(Qt::Unchecked);
+    listItem = new QListWidgetItem("Показать трафик", _optionsList);
+    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
+    listItem->setCheckState(Qt::Unchecked);
+    listItem = new QListWidgetItem("Показать последний маршрут", _optionsList);
+    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
+    listItem->setCheckState(Qt::Unchecked);
+    listItem = new QListWidgetItem("Показать узлы", _optionsList);
+    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
+    listItem->setCheckState(Qt::Unchecked);
+
     timeLayout->addWidget(startTimeLabel, 1, 0);
     timeLayout->addWidget(timeIntervalLabel, 2, 0);
 
@@ -71,6 +88,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(algorithmComboBox, 8, 1);
     timeLayout->addWidget(timeMomentLabel, 9, 0);
     timeLayout->addWidget(timeMomentLineEdit, 9, 1);
+    timeLayout->addWidget(_optionsList, 10, 0, 1, 2);
     timeLayout->setColumnStretch(timeLayout->columnCount(), 1);
     timeLayout->setRowStretch(timeLayout->rowCount(), 1);
     //timeLayout->addStretch(1);
@@ -96,7 +114,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     _graphicsView->setRenderHint(QPainter::Antialiasing); // Enable smooth rendering
     _graphicsView->setDragMode(QGraphicsView::ScrollHandDrag); // Enable drag mode
     _graphicsView->viewport()->installEventFilter(this);
-
+    _scene->installEventFilter(this);
 
     mainLayout->addWidget(timeGroupBox);
     mainLayout->addWidget(_graphicsView, 1);
@@ -110,6 +128,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
                           static_cast<int>(_args.height));
     _painter = new QPainter(_pixmap);
     //painter_->setBackground(QBrush(Qt::white));
+
 
     connect(increaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
     {
@@ -146,6 +165,16 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         QMessageBox::warning(this, "Warning", str);
     });
+    connect(_optionsList, &QListWidget::itemChanged, [this](QListWidgetItem* item)
+    {
+        int currentRow = _optionsList->row(item);
+        int option = std::pow(2,currentRow) ;
+        if (option == 0)
+            _options.setFlag(ShowEdgeNumber, item->checkState());
+        else
+            _options.setFlag(static_cast<Option>(option), item->checkState());
+        paintMap();
+    });
 }
 
 void MainWindow::SetData()
@@ -173,7 +202,7 @@ void MainWindow::paintPoint()
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
     _router->generateDensities(_intervalTime);
-    _scene->paintDots(_graphRef);
+    //_scene->paintDots(_graphRef);
 
     //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
 
@@ -210,6 +239,7 @@ void MainWindow::calculatePath()
 void MainWindow::changeMapZoom(double zoomFactor)
 {
     _scene->clearMap();
+    _scene->clear();
     _args.zoom.SetMagnification(_args.zoom.GetMagnification() * zoomFactor);
     _mapData.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
                             _args.dpi, _args.width, _args.height);
@@ -226,11 +256,25 @@ void MainWindow::changeMapZoom(double zoomFactor)
     {
         _scene->setMap(_pixmap);
     }
+    //paintMap();
+
+    if (_options.testFlag(ShowNodeDot))
+        _scene->paintDots(_graphRef);
+    if (_options.testFlag(ShowNodeNumber))
+        _scene->paintAllNodeIndexes(_graphRef);
+    if (_options.testFlag(ShowEdgeNumber))
+        _scene->paintAllPathIndexes(_graphRef, _pathListRef);
+    if (_options.testFlag(ShowTraffic))
+        _scene->paintCurrentTraffic(_graphRef,_pathListRef, _modelingTime,_intervalTime, _planningMode);
+    if (_options.testFlag(ShowLastRoute))
+        _scene->paintPath(_graphRef,_lastRoute);
+
 }
 
 void MainWindow::moveMap(osmscout::GeoCoord coord)
 {
     _scene->clearMap();
+    _scene->clear();
     _args.center = coord;
     _mapData.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
                             _args.dpi, _args.width, _args.height);
@@ -247,6 +291,38 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
     {
         _scene->setMap(_pixmap);
     }
+    //paintMap();
+
+    if (_options.testFlag(ShowNodeDot))
+        _scene->paintDots(_graphRef);
+    if (_options.testFlag(ShowNodeNumber))
+        _scene->paintAllNodeIndexes(_graphRef);
+    if (_options.testFlag(ShowEdgeNumber))
+        _scene->paintAllPathIndexes(_graphRef, _pathListRef);
+    if (_options.testFlag(ShowTraffic))
+        _scene->paintCurrentTraffic(_graphRef,_pathListRef, _modelingTime,_intervalTime, _planningMode);
+    if (_options.testFlag(ShowLastRoute))
+        _scene->paintPath(_graphRef,_lastRoute);
+
+}
+
+void MainWindow::paintMap()
+{
+    _scene->clearMap();
+    _scene->clear();
+    changeMapZoom(1);
+
+    // if (_options.testFlag(ShowNodeDot))
+    //     _scene->paintDots(_graphRef);
+    // if (_options.testFlag(ShowNodeNumber))
+    //     _scene->paintAllNodeIndexes(_graphRef);
+    // if (_options.testFlag(ShowEdgeNumber))
+    //     _scene->paintAllPathIndexes(_graphRef, _pathListRef);
+    // if (_options.testFlag(ShowTraffic))
+    //     _scene->paintCurrentTraffic(_graphRef,_pathListRef, _modelingTime,_intervalTime, _planningMode);
+    // if (_options.testFlag(ShowLastRoute))
+    //     _scene->paintPath(_graphRef,_lastRoute);
+
 }
 
 bool MainWindow::eventFilter(QObject *object, QEvent *e)
@@ -270,17 +346,18 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
             return true;
         }
     }
-    if (object == _graphicsView->viewport() && e->type() == QEvent::MouseButtonRelease)
+    if (object == _scene && e->type() == QGraphicsSceneMouseEvent::GraphicsSceneMousePress)
     {
-        auto event = static_cast<QMouseEvent*>(e);
-        if (event->button() == Qt::RightButton)
+        auto event = static_cast<QGraphicsSceneMouseEvent*>(e);
+        if (event->buttons() & Qt::RightButton)
         {
-            auto localPoint = event->localPos();
+            //auto localPoint = event->localPos();
             auto widgetPos = event->pos();
             auto viewportSize = _graphicsView->viewport()->size();
             auto viewSize = _graphicsView->size();
             osmscout::GeoCoord coord;
-            _scene->projection_->PixelToGeo(localPoint.x(),localPoint.y(), coord);
+            _scene->projection_->PixelToGeo(event->scenePos().x(), event->scenePos().y(), coord);
+            //_scene->projection_->PixelToGeo(localPoint.x() + viewSize.width() - viewportSize.width(),localPoint.y() + viewSize.height() - viewportSize.height(), coord);
             moveMap(coord);
             return true;
         }
@@ -300,15 +377,17 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
-        /*const auto&*/ path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
+        /*const auto&*/ _lastRoute = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
 
     }
 
-    _scene->clearMap();
-    _scene->clear();
-    changeMapZoom(1);
-    _scene->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
-    _scene->paintPath(_graphRef, path);
+    paintMap();
+
+    // _scene->clearMap();
+    // _scene->clear();
+    // changeMapZoom(1);
+    // _scene->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
+    // _scene->paintPath(_graphRef, _lastRoute);
     //scene_->paintAllNodeIndexes(_graphRef);
 }
 

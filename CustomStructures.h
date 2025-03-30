@@ -20,6 +20,7 @@ struct Node
     osmscout::Point point;
     std::vector<unsigned int> paths;
     double cost;
+    bool isVisited = false;
 };
 
 enum class PlanningMode

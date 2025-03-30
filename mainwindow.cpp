@@ -156,7 +156,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         _planningMode = static_cast<PlanningMode>(index);
     });
 
-    connect(modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+    connect(algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
     {
         _algorithm = static_cast<Algorithm>(index);
     });

@@ -563,7 +563,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
                 auto diagramRes = trafficDiagrammFunctionTriangular(density);
                 pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
                 if (algorithm == Algorithm::AStar)
-                    h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / (MAX_SPEED*1000/60);
+                    h = (double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED)*60;
                 break;
             }
             default:
@@ -580,7 +580,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore + h; // A* cost function
-
+                graph_[neighborIndex].isVisited = true;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -593,6 +593,8 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
         std::cout << "No path found!" << std::endl;
         return {};
     }
+
+    int count = std::count_if(graph_.begin(), graph_.end(), [](Node elem){return elem.isVisited == true;});
 
     std::vector<int> route;
     std::vector<std::pair<int,double>> paths;

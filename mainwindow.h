@@ -21,7 +21,7 @@ public:
     MainWindow(int argc, char *argv[], double screen, QWidget *parent = nullptr);
     ~MainWindow();
 
-    void    SetData();
+    void    setData();
     void    paintPoint();
     void    generateDensities();
     void    calculatePath();
@@ -31,6 +31,7 @@ public:
     void    placeCars(int amount);
     void    moveMap(osmscout::GeoCoord coord);
     void    paintMap();
+    void    compare(unsigned int numOfCars);
 
 
 private:

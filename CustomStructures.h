@@ -39,8 +39,8 @@ enum class Algorithm
 enum Option
 {
     NoOptions = 0x0,
-    ShowEdgeNumber = 0x1,
-    ShowNodeNumber = 0x2,
+    ShowNodeNumber = 0x1,
+    ShowEdgeNumber = 0x2,
     ShowTraffic = 0x4,
     ShowLastRoute = 0x8,
     ShowNodeDot = 0x10

@@ -9,25 +9,25 @@
 
 Router::Router() {}
 
-void Router::LoadDataNodes(const Arguments &args,
+void Router::loadDataNodes(const Arguments &args,
                            const osmscout::Distance &maxRange,
                            osmscout::GeoCoord coord)
 {
     try
     {
-        if (!routeReader_.IsOpen())
+        if (!_routeReader.IsOpen())
         {
-            OpenFile(args);
+            openFile(args);
         }
-        NodeList_.clear();
-        for (uint32_t i = 1; i <= nodeCount_; ++i)
+        _nodeList.clear();
+        for (uint32_t i = 1; i <= _nodeCount; ++i)
         {
             osmscout::RouteNode node;
-            node.Read(routeReader_);
+            node.Read(_routeReader);
             size_t validPaths = 0;                                              /////////////
             for (const auto &path : node.paths)
             {
-                if (path.IsUsable(vehicle_) || path.IsRestricted(vehicle_))
+                if (path.IsUsable(_vehicle) || path.IsRestricted(_vehicle))
                 {
                     ++validPaths;
                 }
@@ -36,45 +36,45 @@ void Router::LoadDataNodes(const Arguments &args,
                 osmscout::GetSphericalDistance(coord, node.GetCoord());
             if (validPaths > 0  && directDistance <= maxRange)
             {
-                NodeList_.push_back(node);
+                _nodeList.push_back(node);
             }
         }
-        if (routeReader_.IsOpen())
+        if (_routeReader.IsOpen())
         {
-            routeReader_.Close();
+            _routeReader.Close();
         }
     }
     catch (osmscout::IOException &e)
     {
         osmscout::log.Error() << "Error: " << e.GetErrorMsg();
-        routeReader_.CloseFailsafe();
+        _routeReader.CloseFailsafe();
         throw e;
     }
 }
 
-void Router::SetupGraphFromNodes()
+void Router::setupGraphFromNodes()
 {
-    graph_.clear();
+    _graph.clear();
     std::unordered_map<osmscout::Id, size_t> idToIndexMap;
-    for (size_t i = 0; i < NodeList_.size(); ++i)
+    for (size_t i = 0; i < _nodeList.size(); ++i)
     {
-        idToIndexMap[NodeList_[i].GetId()] = i;
+        idToIndexMap[_nodeList[i].GetId()] = i;
     }
-    graph_.reserve(NodeList_.size());
-    for (const auto &routeNode : NodeList_)
+    _graph.reserve(_nodeList.size());
+    for (const auto &routeNode : _nodeList)
     {
         Node node;
         node.point = routeNode.GetPoint();
 
         for (const auto &routePath : routeNode.paths)
         {
-            if (!routePath.IsUsable(vehicle_) || routePath.IsRestricted(vehicle_))
+            if (!routePath.IsUsable(_vehicle) || routePath.IsRestricted(_vehicle))
             {
                 continue;
             }
             Path path;
             path.distanceLength = routePath.distance;
-            path.startNodeIndex = graph_.size();
+            path.startNodeIndex = _graph.size();
             path.targetNodeIndex = idToIndexMap[routePath.id];
             //path.flags = routePath.flags;
             path.fileRef = routeNode.objects[routePath.objectIndex].object;
@@ -83,7 +83,7 @@ void Router::SetupGraphFromNodes()
             node.paths.push_back(lastIndex);
             //node.paths.push_back(path);
         }
-        graph_.push_back(node);
+        _graph.push_back(node);
     }
 
     // QFile file("allPaths.csv");
@@ -92,14 +92,14 @@ void Router::SetupGraphFromNodes()
 
 
 }
-void Router::OpenFile(const Arguments &args)
+void Router::openFile(const Arguments &args)
 {
-    routeReader_.Open(args.map + "router.dat", osmscout::FileScanner::Sequential,
+    _routeReader.Open(args.map + "router.dat", osmscout::FileScanner::Sequential,
                       true);
-    routeReader_.ReadFileOffset();
-    nodeCount_ = routeReader_.ReadUInt32();
-    routeReader_.ReadUInt32();
-    NodeList_.reserve(nodeCount_);
+    _routeReader.ReadFileOffset();
+    _nodeCount = _routeReader.ReadUInt32();
+    _routeReader.ReadUInt32();
+    _nodeList.reserve(_nodeCount);
 }
 
 void Router::generateDensities(double intervalTime)
@@ -110,6 +110,7 @@ void Router::generateDensities(double intervalTime)
     int intervalsCount = double(TIME_RANGE) / intervalTime;
     for (auto& path : _pathList)
     {
+        path.densities.clear();
         if (path.distanceLength.AsMeter() < MIN_PATH_LENGTH)
         {
             for (int i = 0; i < intervalsCount; i++)
@@ -158,7 +159,7 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
         closedSet.insert(currentIndex);
 
         // Iterate over neighbors
-        for (const auto& path : graph_[currentIndex].paths)
+        for (const auto& path : _graph[currentIndex].paths)
         {
             int neighborIndex = _pathList[path].targetNodeIndex;
 
@@ -169,7 +170,7 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
             double pathCost = _pathList[path].distanceLength.AsMeter() / 1000.0;
             double tentativeGScore = gScore[currentIndex] + pathCost;
 
-            double h = graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
+            double h = _graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
 
             // Check if this path to neighbor is better
             if (gScore.find(neighborIndex) == gScore.end() || tentativeGScore < gScore[neighborIndex])
@@ -236,7 +237,7 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
         closedSet.insert(currentIndex);
 
         // Iterate over neighbors
-        for (const auto pathIndex : graph_[currentIndex].paths)
+        for (const auto pathIndex : _graph[currentIndex].paths)
         {
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
 
@@ -249,7 +250,7 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
             double pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
             double tentativeGScore = gScore[currentIndex] + pathCost;
 
-            double h = double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
+            double h = double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
 
 
             // Check if this path to neighbor is better
@@ -354,7 +355,7 @@ std::vector<int> Router::findPathDijkstra(int startNodeIndex, int targetNodeInde
         closedSet.insert(currentIndex);
 
         // Iterate over all neighbor paths from current node
-        for (const auto &pathIndex : graph_[currentIndex].paths)
+        for (const auto &pathIndex : _graph[currentIndex].paths)
         {
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
             if (closedSet.find(neighborIndex) != closedSet.end())
@@ -421,7 +422,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
         closedSet.insert(currentIndex);
 
         // Iterate over neighbors
-        for (const auto pathIndex : graph_[currentIndex].paths)
+        for (const auto pathIndex : _graph[currentIndex].paths)
         {
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
 
@@ -454,7 +455,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
         return {};
     }
 
-    std::vector<int> route;
+    std::vector<int> route;                     // index of node in route
     std::vector<std::pair<int,double>> paths;
 
     int numberOfCars = 1;
@@ -504,6 +505,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
         // }
         out << "\n\n";
     }
+
     return route;
 }
 
@@ -540,7 +542,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
         closedSet.insert(currentIndex);
 
         // Iterate over neighbors
-        for (const auto pathIndex : graph_[currentIndex].paths)
+        for (const auto pathIndex : _graph[currentIndex].paths)
         {
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
 
@@ -553,7 +555,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             case PlanningMode::OnlyDistance:
             {
                 pathCost = _pathList[pathIndex].distanceLength.AsMeter() / 1000.0;
-                h = graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
+                h = _graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
                 break;
             }
             case PlanningMode::HistoricalData:
@@ -563,7 +565,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
                 auto diagramRes = trafficDiagrammFunctionTriangular(density);
                 pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
                 if (algorithm == Algorithm::AStar)
-                    h = (double(graph_[neighborIndex].point.GetCoord().GetDistance(graph_[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED)*60;
+                    h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED)*60;
                 break;
             }
             default:
@@ -580,7 +582,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore + h; // A* cost function
-                graph_[neighborIndex].isVisited = true;
+                _graph[neighborIndex].isVisited = true;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -594,7 +596,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
         return {};
     }
 
-    int count = std::count_if(graph_.begin(), graph_.end(), [](Node elem){return elem.isVisited == true;});
+    int count = std::count_if(_graph.begin(), _graph.end(), [](Node elem){return elem.isVisited == true;});
 
     std::vector<int> route;
     std::vector<std::pair<int,double>> paths;
@@ -646,6 +648,9 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
         // }
         out << "\n\n";
     }
+
+    _travelTime = gScore[route.back()] - startTime;
+
     return route;
 }
 
@@ -658,6 +663,7 @@ double Router::trafficDiagrammFunctionTriangular(double p)
 
     if (p >= 120)
     {
+        _congestion = true;
         emit message("Density >= 120");
     }
 

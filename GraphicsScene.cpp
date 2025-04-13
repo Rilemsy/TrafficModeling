@@ -24,7 +24,7 @@ void GraphicsScene::clearMap() {
 
 void GraphicsScene::paintDots(std::vector<Node>* graph)
 {
-    for (auto node : *graph)
+    for (const auto& node : *graph)
     {
         QColor color;
 

@@ -18,6 +18,7 @@
 #include <QFile>
 #include <QComboBox>
 #include <QMessageBox>
+#include <QSpinBox>
 
 #include <queue>
 #include <unordered_set>
@@ -73,6 +74,14 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
     listItem->setCheckState(Qt::Unchecked);
 
+    QSpinBox* numOfCarsSpinBox = new QSpinBox(this);
+    numOfCarsSpinBox->setValue(10);
+    QPushButton* compareButton = new QPushButton("Сравнить",this);
+    connect(compareButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
+        {
+            compare(numOfCarsSpinBox->value());
+        });
+
     timeLayout->addWidget(startTimeLabel, 1, 0);
     timeLayout->addWidget(timeIntervalLabel, 2, 0);
 
@@ -89,6 +98,9 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(timeMomentLabel, 9, 0);
     timeLayout->addWidget(timeMomentLineEdit, 9, 1);
     timeLayout->addWidget(_optionsList, 10, 0, 1, 2);
+    timeLayout->addWidget(numOfCarsSpinBox, 11, 0);
+    timeLayout->addWidget(compareButton, 11, 1);
+
     timeLayout->setColumnStretch(timeLayout->columnCount(), 1);
     timeLayout->setRowStretch(timeLayout->rowCount(), 1);
     //timeLayout->addStretch(1);
@@ -169,15 +181,15 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         int currentRow = _optionsList->row(item);
         int option = std::pow(2,currentRow) ;
-        if (option == 0)
-            _options.setFlag(ShowEdgeNumber, item->checkState());
+        if (currentRow == 0)
+            _options.setFlag(ShowNodeNumber, item->checkState());
         else
             _options.setFlag(static_cast<Option>(option), item->checkState());
         paintMap();
     });
 }
 
-void MainWindow::SetData()
+void MainWindow::setData()
 {
     osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
     osmscout::TypeInfoRef buildingType =
@@ -195,8 +207,8 @@ void MainWindow::paintPoint()
 {
     osmscout::GeoCoord pointFrom(55.6565, 41.8260);
     osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.6876, 42.6846));
-    _router->LoadDataNodes(_args, dist, pointFrom);
-    _router->SetupGraphFromNodes();
+    _router->loadDataNodes(_args, dist, pointFrom);
+    _router->setupGraphFromNodes();
 
     //auto& graph = router_->getGraph();
     _graphRef = &_router->getGraph();
@@ -389,6 +401,38 @@ void MainWindow::placeCars(int amount)
     // _scene->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
     // _scene->paintPath(_graphRef, _lastRoute);
     //scene_->paintAllNodeIndexes(_graphRef);
+}
+
+void MainWindow::compare(unsigned int numOfCars)
+{
+    QRandomGenerator random(1234);
+    int size = _graphRef->size();
+    std::vector<int> path;
+    std::vector<double> travelTimes;
+    unsigned int i = 0;
+    for (i = 0; i < numOfCars; i++)
+    {
+        path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::OnlyDistance, _algorithm);
+        if(_router->getCongestion())
+            break;
+        travelTimes.push_back(_router->getTravelTime());
+    }
+    double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
+
+    _router->generateDensities(_intervalTime);
+    travelTimes.clear();
+    for (unsigned int j = 0; j < i; j++)
+    {
+        path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::DriverInfluence, _algorithm);
+        if(_router->getCongestion())
+            break;
+        travelTimes.push_back(_router->getTravelTime());
+    }
+    double avgTravelTimeInfluence = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
+    _router->generateDensities(_intervalTime);
+
+    QMessageBox::information(this, "Title", QString("Default: %1, Influence: %2, NumOfCarsBeforeJam: %3").arg(avgTravelTimeDefault).arg(avgTravelTimeInfluence).arg(i));
+
 }
 
 MainWindow::~MainWindow()

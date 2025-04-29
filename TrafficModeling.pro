@@ -9,8 +9,10 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 INCLUDEPATH += "/usr/local/include"
+INCLUDEPATH += "/usr/include/libsumo"
 
 LIBS += -L"/usr/local/lib" -losmscoutd -losmscout_mapd -losmscout_map_qtd -losmscout_client_qtd
+LIBS += -L"/usr/share/sumo/bin" -ltracicpp
 
 SOURCES += \
     GraphicsScene.cpp \

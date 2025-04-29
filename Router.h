@@ -42,7 +42,9 @@ public:
                             osmscout::GeoCoord coord);
     void                setupGraphFromNodes();
     void                openFile(const Arguments &args);
-    void                generateDensities(double intervalTime);
+    void                generateDensities(double intervalTime, PlanningMode);
+    void                setMode(PlanningMode);
+
     std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex);
     std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
     std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex);
@@ -50,6 +52,10 @@ public:
     std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm);
 
     double              trafficDiagrammFunctionTriangular(double density);
+
+    std::vector<Path>                   pathListConst;
+
+
 
 signals:
     void message(QString str);

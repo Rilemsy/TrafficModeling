@@ -3,6 +3,9 @@
 #include <osmscoutmap/MapService.h>
 #include <osmscoutmapqt/MapPainterQt.h>
 
+#include <iostream>
+#include <libsumo/libtraci.h>
+
 #include <QGuiApplication>
 #include <QApplication>
 #include <QScreen>
@@ -24,6 +27,8 @@
 #include <unordered_set>
 
 #include "mainwindow.h"
+
+using namespace libtraci;
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     : QMainWindow(parent),
@@ -213,7 +218,7 @@ void MainWindow::paintPoint()
     //auto& graph = router_->getGraph();
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
-    _router->generateDensities(_intervalTime);
+    _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
     //_scene->paintDots(_graphRef);
 
     //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
@@ -412,14 +417,15 @@ void MainWindow::compare(unsigned int numOfCars)
     unsigned int i = 0;
     for (i = 0; i < numOfCars; i++)
     {
-        path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::OnlyDistance, _algorithm);
+        path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::HistoricalData, _algorithm);
         if(_router->getCongestion())
             break;
         travelTimes.push_back(_router->getTravelTime());
     }
     double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
 
-    _router->generateDensities(_intervalTime);
+    _router->pathListConst.clear();
+    _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
     travelTimes.clear();
     for (unsigned int j = 0; j < i; j++)
     {
@@ -429,7 +435,8 @@ void MainWindow::compare(unsigned int numOfCars)
         travelTimes.push_back(_router->getTravelTime());
     }
     double avgTravelTimeInfluence = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
-    _router->generateDensities(_intervalTime);
+    _router->pathListConst.clear();
+    _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
 
     QMessageBox::information(this, "Title", QString("Default: %1, Influence: %2, NumOfCarsBeforeJam: %3").arg(avgTravelTimeDefault).arg(avgTravelTimeInfluence).arg(i));
 

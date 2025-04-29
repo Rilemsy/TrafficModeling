@@ -102,7 +102,7 @@ void Router::openFile(const Arguments &args)
     _nodeList.reserve(_nodeCount);
 }
 
-void Router::generateDensities(double intervalTime)
+void Router::generateDensities(double intervalTime, PlanningMode planningMode)
 {
     auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
     { return rPeak1*exp(-(((t-tPeak1)*(t-tPeak1))/(2*sPeak1*sPeak1))) +  rPeak2*exp(-(((t-tPeak2)*(t-tPeak2))/(2*sPeak2*sPeak2))); };
@@ -126,6 +126,15 @@ void Router::generateDensities(double intervalTime)
             path.densities.push_back(0.0);
         }
     }
+    if(planningMode == PlanningMode::HistoricalData)
+    {
+        pathListConst = _pathList;
+    }
+}
+
+void Router::setMode(PlanningMode mode)
+{
+    _planningMode = mode;
 }
 
 std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
@@ -526,7 +535,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
 
     // Initialize start node
     gScore[startNodeIndex] = startTime;
-    priorityQueue.push({startNodeIndex, 0.0});
+    priorityQueue.push({startNodeIndex, startTime});
 
     while (!priorityQueue.empty())
     {
@@ -549,7 +558,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             if (closedSet.find(neighborIndex) != closedSet.end())
                 continue;
 
-            double h = 0, pathCost = 0;
+            double h = 0, pathCost = 0, density = 0;
 
             switch (planningMode) {
             case PlanningMode::OnlyDistance:
@@ -559,9 +568,17 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
                 break;
             }
             case PlanningMode::HistoricalData:
+            {
+                density = pathListConst[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
+                auto diagramRes = trafficDiagrammFunctionTriangular(density);
+                pathCost = ((pathListConst[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
+                if (algorithm == Algorithm::AStar)
+                    h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED)*60;
+                break;
+            }
             case PlanningMode::DriverInfluence:
             {
-                double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
+                density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
                 auto diagramRes = trafficDiagrammFunctionTriangular(density);
                 pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
                 if (algorithm == Algorithm::AStar)

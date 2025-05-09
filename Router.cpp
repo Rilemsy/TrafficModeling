@@ -78,6 +78,37 @@ void Router::setupGraphFromNodes()
             path.targetNodeIndex = idToIndexMap[routePath.id];
             //path.flags = routePath.flags;
             path.fileRef = routeNode.objects[routePath.objectIndex].object;
+            if (path.fileRef.GetType()==osmscout::RefType::refWay)
+            {
+                osmscout::WayRef way;
+                if (_database->GetWayByOffset(path.fileRef.GetFileOffset(), way))
+                {
+                    auto features = way->GetFeatureValueBuffer();
+                    for (const auto& featureInstance: features.GetType()->GetFeatures())
+                    {
+                        if (features.HasFeature(featureInstance.GetIndex()))
+                        {
+                            osmscout::FeatureRef feature=featureInstance.GetFeature();
+                            if (feature->HasValue())
+                            {
+                                osmscout::FeatureValue *value=features.GetValue(featureInstance.GetIndex());
+                                const auto *lanes = dynamic_cast<const osmscout::LanesFeatureValue*>(value);
+                                if (lanes!=nullptr)
+                                {
+                                    path.lanes = (short int)lanes->GetLanes();
+                                }
+                                const auto *maxSpeed = dynamic_cast<const osmscout::MaxSpeedFeatureValue*>(value);
+                                if (maxSpeed!=nullptr)
+                                {
+                                    path.maxSpeed = (int)maxSpeed->GetMaxSpeed();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
             int lastIndex = _pathList.size();
             _pathList.push_back(path);
             node.paths.push_back(lastIndex);
@@ -94,8 +125,7 @@ void Router::setupGraphFromNodes()
 }
 void Router::openFile(const Arguments &args)
 {
-    _routeReader.Open(args.map + "router.dat", osmscout::FileScanner::Sequential,
-                      true);
+    _routeReader.Open(args.map + "router.dat", osmscout::FileScanner::Sequential, true);
     _routeReader.ReadFileOffset();
     _nodeCount = _routeReader.ReadUInt32();
     _routeReader.ReadUInt32();
@@ -135,6 +165,11 @@ void Router::generateDensities(double intervalTime, PlanningMode planningMode)
 void Router::setMode(PlanningMode mode)
 {
     _planningMode = mode;
+}
+
+void Router::setDatabase(osmscout::DatabaseRef database)
+{
+    _database = database;
 }
 
 std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
@@ -215,7 +250,7 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex)
 
 std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime)
 {
-    int MAX_SPEED = 80;
+    int MAX_SPEED = 90;
 
     using NodeCostPair = std::pair<int, double>;
 
@@ -248,15 +283,16 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
         // Iterate over neighbors
         for (const auto pathIndex : _graph[currentIndex].paths)
         {
+            Path path = _pathList[pathIndex];
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
 
             if (closedSet.find(neighborIndex) != closedSet.end())
                 continue;
 
             // Compute gScore (cost to reach this neighbor)
-            double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
-            auto diagramRes = trafficDiagrammFunctionTriangular(density);
-            double pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
+            float density = path.densities[std::floor(gScore[currentIndex]/intervalTime)];
+            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
+            double pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
             double tentativeGScore = gScore[currentIndex] + pathCost;
 
             double h = double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED;
@@ -433,14 +469,15 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
         // Iterate over neighbors
         for (const auto pathIndex : _graph[currentIndex].paths)
         {
+            Path path = _pathList[pathIndex];
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
 
             if (closedSet.find(neighborIndex) != closedSet.end())
                 continue;
 
             // Compute gScore (cost to reach this neighbor)
-            double density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
-            auto diagramRes = trafficDiagrammFunctionTriangular(density);
+            double density = path.densities[std::floor(gScore[currentIndex]/intervalTime)];
+            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
             double pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
             double tentativeGScore = gScore[currentIndex] + pathCost;
 
@@ -553,6 +590,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
         // Iterate over neighbors
         for (const auto pathIndex : _graph[currentIndex].paths)
         {
+            Path path = _pathList[pathIndex];
             int neighborIndex = _pathList[pathIndex].targetNodeIndex;
 
             if (closedSet.find(neighborIndex) != closedSet.end())
@@ -563,14 +601,14 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             switch (planningMode) {
             case PlanningMode::OnlyDistance:
             {
-                pathCost = _pathList[pathIndex].distanceLength.AsMeter() / 1000.0;
+                pathCost = path.distanceLength.AsMeter() / 1000.0;
                 h = _graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
                 break;
             }
             case PlanningMode::HistoricalData:
             {
                 density = pathListConst[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
-                auto diagramRes = trafficDiagrammFunctionTriangular(density);
+                auto diagramRes = trafficDiagrammFunctionTriangular(density, pathListConst[pathIndex].maxSpeed, pathListConst[pathIndex].lanes);
                 pathCost = ((pathListConst[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
                 if (algorithm == Algorithm::AStar)
                     h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED)*60;
@@ -578,8 +616,8 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             }
             case PlanningMode::DriverInfluence:
             {
-                density = _pathList[pathIndex].densities[std::floor(gScore[currentIndex]/intervalTime)];
-                auto diagramRes = trafficDiagrammFunctionTriangular(density);
+                density = path.densities[std::floor(gScore[currentIndex]/intervalTime)];
+                auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
                 pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 60; // в минутах
                 if (algorithm == Algorithm::AStar)
                     h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / MAX_SPEED)*60;
@@ -671,13 +709,13 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
     return route;
 }
 
-double Router::trafficDiagrammFunctionTriangular(double p)
+float Router::trafficDiagrammFunctionTriangular(float p, float vf, short int lanes)
 {
-    double qc = 1600;
-    double pj = 120;
-    double pc = 20;
-    double vf = 80;
+    float qc = 1600;
+    float pj = 120;
+    float pc = 20;
 
+    p = p/lanes;
     if (p >= 120)
     {
         _congestion = true;

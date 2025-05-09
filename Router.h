@@ -17,20 +17,24 @@ class Router : public QObject
 
 public:
     Router();
+
     std::vector<Node>&  getGraph()
     {
         return _graph;
     }
+
     std::vector<Path>&  getPathList()
     {
         return _pathList;
     }
+
     double getTravelTime()
     {
         auto value = _travelTime;
         _travelTime = 0;
         return value;
     }
+
     bool getCongestion()
     {
         bool value= _congestion;
@@ -38,12 +42,15 @@ public:
         return value;
     }
 
+
+
     void                loadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
                             osmscout::GeoCoord coord);
     void                setupGraphFromNodes();
     void                openFile(const Arguments &args);
     void                generateDensities(double intervalTime, PlanningMode);
     void                setMode(PlanningMode);
+    void                setDatabase(osmscout::DatabaseRef database);
 
     std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex);
     std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
@@ -51,7 +58,7 @@ public:
     std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
     std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm);
 
-    double              trafficDiagrammFunctionTriangular(double density);
+    float              trafficDiagrammFunctionTriangular(float density, float vf, short int lanes);
 
     std::vector<Path>                   pathListConst;
 
@@ -72,6 +79,7 @@ private:
     const double                        MIN_PATH_LENGTH = 100;
     double                              _travelTime = 0;
     bool                                _congestion = false;
+    osmscout::DatabaseRef               _database;
 };
 
 #endif // ROUTER_H

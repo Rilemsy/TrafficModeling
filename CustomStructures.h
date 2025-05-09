@@ -11,7 +11,8 @@ struct Path
     osmscout::ObjectFileRef fileRef;
     unsigned int startNodeIndex;            // for paint paths indexes
     unsigned int targetNodeIndex;
-    double cost;
+    float maxSpeed = 90;
+    short int lanes = 1;
     std::vector<float> densities;
 };
 

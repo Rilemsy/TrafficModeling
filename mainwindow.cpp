@@ -140,6 +140,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     _mapData.OpenDatabase();
     _args = _mapData.GetArguments();
+    _router->setDatabase(_mapData.database);
     _scene->setProjections(&_mapData.projection);
     _pixmap = new QPixmap(static_cast<int>(_args.width),
                           static_cast<int>(_args.height));
@@ -219,6 +220,90 @@ void MainWindow::paintPoint()
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
     _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
+    int count = 0;
+    int countNone = 0;
+    for (auto it : *_pathListRef)
+    {
+        auto object = it.fileRef;
+        osmscout::WayRef way;
+        QString label = object.GetTypeName();
+        label+=" ";
+        label += QString::number(object.GetFileOffset());
+        if (object.GetType()==osmscout::RefType::refArea)
+        {
+            countNone++;
+        }
+
+        if (object.GetType()==osmscout::RefType::refWay) {
+            count++;
+
+            if (_mapData.database->GetWayByOffset(object.GetFileOffset(),
+                                         way)) {
+                label+=" ";
+                label+= QString::fromStdString(way->GetType()->GetName());
+
+                auto features = way->GetFeatureValueBuffer();
+
+                //std::cout << "   - type:     " << features.GetType()->GetName() << std::endl;
+
+                for (const auto& featureInstance :features.GetType()->GetFeatures()) {
+                    if (features.HasFeature(featureInstance.GetIndex())) {
+                        osmscout::FeatureRef feature=featureInstance.GetFeature();
+                        std::string str("Lanes");
+                        if (feature->GetName().compare(str) == 0)
+                        {
+                            //std::cout << "YES LANES" << std::endl;
+                        }
+
+
+                        if (feature->HasValue()) {
+                            osmscout::FeatureValue *value=features.GetValue(featureInstance.GetIndex());
+                            if (feature->HasLabel()) {
+                                std::string labelTemp=value->GetLabel(osmscout::Locale(), 0);
+                                if (!labelTemp.empty()) {
+                                    //std::cout << ": " << osmscout::UTF8StringToLocaleString(label);
+                                }
+
+                                const auto *lanes = dynamic_cast<const osmscout::LanesFeatureValue*>(value);
+                                if (lanes!=nullptr)
+                                {
+                                    //std::cout << " LANES: " << (int)lanes->GetLanes()<<std::endl;
+                                }
+
+                            }
+                            else {
+                                // std::cout << "   + feature " << feature->GetName() << ": "
+                                //           << osmscout::UTF8StringToLocaleString(value->GetLabel(osmscout::Locale(), 0))
+                                //           << std::endl;
+
+                                const auto *lanes = dynamic_cast<const osmscout::LanesFeatureValue*>(value);
+                                if (lanes!=nullptr)
+                                {
+                                    //std::cout << " LANES: " << (int)lanes->GetLanes()<<std::endl;
+                                }
+
+
+                                const auto *maxSpeed = dynamic_cast<const osmscout::MaxSpeedFeatureValue*>(value);
+                                if (maxSpeed!=nullptr)
+                                {
+                                    //std::cout << "MAXSPEED: " << (int)maxSpeed->GetMaxSpeed()<<std::endl;
+                                }
+                            }
+                        }
+                        else {
+                            //std::cout << "   + feature " << feature->GetName() << " NO_VALUE"<< std::endl;
+                        }
+                    }
+                }
+
+
+            }
+
+        }
+
+    }
+
+
     //_scene->paintDots(_graphRef);
 
     //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);

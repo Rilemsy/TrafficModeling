@@ -27,7 +27,6 @@ struct Node
 enum class PlanningMode
 {
     OnlyDistance = 0,
-    HistoricalData,
     DriverInfluence        // не особо важно, с historicaldata или с нулевыми плотностями
 };
 

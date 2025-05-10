@@ -48,7 +48,7 @@ public:
                             osmscout::GeoCoord coord);
     void                setupGraphFromNodes();
     void                openFile(const Arguments &args);
-    void                generateDensities(double intervalTime, PlanningMode);
+    void                generateDensities(double intervalTime);
     void                setMode(PlanningMode);
     void                setDatabase(osmscout::DatabaseRef database);
 
@@ -56,11 +56,13 @@ public:
     std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
     std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex);
     std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
-    std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm);
+    std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm, bool densityUpdate);
 
     float              trafficDiagrammFunctionTriangular(float density, float vf, short int lanes);
 
-    std::vector<Path>                   pathListConst;
+    float               calculateRouteCost(const std::vector<int>& route, int startTime);
+
+    //std::vector<Path>                   pathListConst;
 
 
 
@@ -74,12 +76,14 @@ private:
     std::vector<Node>                   _graph;
     std::vector<Path>                   _pathList;
     uint32_t                            _nodeCount;
-    const int                           TIME_RANGE = 1440;  // 24 часа в минутах
     PlanningMode                        _planningMode = PlanningMode::DriverInfluence;
-    const double                        MIN_PATH_LENGTH = 100;
+    //const double                        MIN_PATH_LENGTH = 100;
     double                              _travelTime = 0;
     bool                                _congestion = false;
     osmscout::DatabaseRef               _database;
+
+    const int                           TIME_RANGE = 1440;  // 24 часа в минутах
+    const int                           DENSITY_LIMIT = 120;
 };
 
 #endif // ROUTER_H

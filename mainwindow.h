@@ -32,7 +32,7 @@ public:
     void    moveMap(osmscout::GeoCoord coord);
     void    paintMap();
     void    compare(unsigned int numOfCars);
-
+    void    runSimulation(unsigned int numOfCars);
 
 private:
     Router*             _router;
@@ -52,8 +52,8 @@ private:
     Options             _options;
     std::vector<int>    _lastRoute;
 
-    unsigned int    _modelingTime = 240;  // в минутах
-    double          _intervalTime = 15;
+    unsigned int    _modelingTime = 0;  // в секундах
+    unsigned int    _intervalTime = 30;
     double          _momentTime = _modelingTime;
 };
 #endif // MAINWINDOW_H

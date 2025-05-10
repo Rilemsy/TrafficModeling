@@ -22,6 +22,7 @@
 #include <QComboBox>
 #include <QMessageBox>
 #include <QSpinBox>
+#include <QTextStream>
 
 #include <queue>
 #include <unordered_set>
@@ -84,7 +85,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QPushButton* compareButton = new QPushButton("Сравнить",this);
     connect(compareButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
         {
-            compare(numOfCarsSpinBox->value());
+            runSimulation(numOfCarsSpinBox->value());
         });
 
     timeLayout->addWidget(startTimeLabel, 1, 0);
@@ -219,7 +220,7 @@ void MainWindow::paintPoint()
     //auto& graph = router_->getGraph();
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
-    _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
+    _router->generateDensities(_intervalTime);
     int count = 0;
     int countNone = 0;
     for (auto it : *_pathListRef)
@@ -479,7 +480,7 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
-        /*const auto&*/ _lastRoute = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
+        /*const auto&*/ _lastRoute = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm, true);
 
     }
 
@@ -495,35 +496,78 @@ void MainWindow::placeCars(int amount)
 
 void MainWindow::compare(unsigned int numOfCars)
 {
+    // QRandomGenerator random(1234);
+    // int size = _graphRef->size();
+    // std::vector<int> path;
+    // std::vector<double> travelTimes;
+    // unsigned int i = 0;
+    // for (i = 0; i < numOfCars; i++)
+    // {
+    //     path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::OnlyDistance, _algorithm);
+    //     if(_router->getCongestion())
+    //         break;
+    //     travelTimes.push_back(_router->getTravelTime());
+    // }
+    // double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
+
+    // //_router->pathListConst.clear();
+    // _router->generateDensities(_intervalTime);
+    // travelTimes.clear();
+    // for (unsigned int j = 0; j < i; j++)
+    // {
+    //     path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::DriverInfluence, _algorithm);
+    //     if(_router->getCongestion())
+    //         break;
+    //     travelTimes.push_back(_router->getTravelTime());
+    // }
+    // double avgTravelTimeInfluence = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
+    // //_router->pathListConst.clear();
+    // _router->generateDensities(_intervalTime);
+
+    // QMessageBox::information(this, "Title", QString("Default: %1, Influence: %2, NumOfCarsBeforeJam: %3").arg(avgTravelTimeDefault).arg(avgTravelTimeInfluence).arg(i));
+
+}
+
+void MainWindow::runSimulation(unsigned int numOfCars)
+{
     QRandomGenerator random(1234);
     int size = _graphRef->size();
     std::vector<int> path;
     std::vector<double> travelTimes;
+    std::vector<std::vector<int>> routes;
+
+    QFile file("simulation.csv");
+    if (file.exists())
+        file.remove();
+
+    QTextStream out;
+
+
+    if (file.open(QFile::WriteOnly | QFile::Append))
+    {
+        out.setDevice(&file);
+    }
+
+    _router->generateDensities(_intervalTime);
+
     unsigned int i = 0;
+    int routeStartTime = _startTimeLineEdit->text().toInt();
     for (i = 0; i < numOfCars; i++)
     {
-        path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::HistoricalData, _algorithm);
-        if(_router->getCongestion())
-            break;
-        travelTimes.push_back(_router->getTravelTime());
+        path = _router->findPathUniversal(398,543,routeStartTime,_intervalTime, PlanningMode::DriverInfluence, _algorithm, true);
+        routes.push_back(path);
+        // for (auto route : routes)
+        // {
+
+        // }
+        float travelTime = _router->getTravelTime();
+        travelTimes.push_back(travelTime);
+
+        out << routeStartTime << "," << travelTime << "\n";
+
+        routeStartTime += 2;
     }
     double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
-
-    _router->pathListConst.clear();
-    _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
-    travelTimes.clear();
-    for (unsigned int j = 0; j < i; j++)
-    {
-        path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::DriverInfluence, _algorithm);
-        if(_router->getCongestion())
-            break;
-        travelTimes.push_back(_router->getTravelTime());
-    }
-    double avgTravelTimeInfluence = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
-    _router->pathListConst.clear();
-    _router->generateDensities(_intervalTime, PlanningMode::HistoricalData);
-
-    QMessageBox::information(this, "Title", QString("Default: %1, Influence: %2, NumOfCarsBeforeJam: %3").arg(avgTravelTimeDefault).arg(avgTravelTimeInfluence).arg(i));
 
 }
 

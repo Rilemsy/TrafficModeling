@@ -57,12 +57,14 @@ public:
     std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex);
     std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
     std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm, bool densityUpdate);
+    std::vector<int>    findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode);
 
-    float              trafficDiagrammFunctionTriangular(float density, float vf, short int lanes);
+    float               trafficDiagrammFunctionTriangular(float density, float vf, short int lanes);
 
-    float               calculateRouteCost(const std::vector<int>& route, int startTime);
+    float               calculateRouteCost(const std::vector<int>& route, int startTime, bool densityUpdate);
 
     //std::vector<Path>                   pathListConst;
+    float                               _intervalTime = 30;
 
 
 
@@ -82,7 +84,7 @@ private:
     bool                                _congestion = false;
     osmscout::DatabaseRef               _database;
 
-    const int                           TIME_RANGE = 1440;  // 24 часа в минутах
+    const int                           TIME_RANGE = 86400;  // 24 часа в секундах
     const int                           DENSITY_LIMIT = 120;
 };
 

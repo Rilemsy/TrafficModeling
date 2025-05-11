@@ -82,6 +82,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     QSpinBox* numOfCarsSpinBox = new QSpinBox(this);
     numOfCarsSpinBox->setValue(10);
+    numOfCarsSpinBox->setRange(0, 1000000);
     QPushButton* compareButton = new QPushButton("Сравнить",this);
     connect(compareButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
         {
@@ -163,6 +164,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
     {
         _intervalTime = timeIntervalLineEdit->text().toDouble();
+        _router->_intervalTime = _intervalTime;
     });
 
     connect(timeMomentLineEdit, &QLineEdit::editingFinished, [this, timeMomentLineEdit]
@@ -221,88 +223,7 @@ void MainWindow::paintPoint()
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
     _router->generateDensities(_intervalTime);
-    int count = 0;
-    int countNone = 0;
-    for (auto it : *_pathListRef)
-    {
-        auto object = it.fileRef;
-        osmscout::WayRef way;
-        QString label = object.GetTypeName();
-        label+=" ";
-        label += QString::number(object.GetFileOffset());
-        if (object.GetType()==osmscout::RefType::refArea)
-        {
-            countNone++;
-        }
-
-        if (object.GetType()==osmscout::RefType::refWay) {
-            count++;
-
-            if (_mapData.database->GetWayByOffset(object.GetFileOffset(),
-                                         way)) {
-                label+=" ";
-                label+= QString::fromStdString(way->GetType()->GetName());
-
-                auto features = way->GetFeatureValueBuffer();
-
-                //std::cout << "   - type:     " << features.GetType()->GetName() << std::endl;
-
-                for (const auto& featureInstance :features.GetType()->GetFeatures()) {
-                    if (features.HasFeature(featureInstance.GetIndex())) {
-                        osmscout::FeatureRef feature=featureInstance.GetFeature();
-                        std::string str("Lanes");
-                        if (feature->GetName().compare(str) == 0)
-                        {
-                            //std::cout << "YES LANES" << std::endl;
-                        }
-
-
-                        if (feature->HasValue()) {
-                            osmscout::FeatureValue *value=features.GetValue(featureInstance.GetIndex());
-                            if (feature->HasLabel()) {
-                                std::string labelTemp=value->GetLabel(osmscout::Locale(), 0);
-                                if (!labelTemp.empty()) {
-                                    //std::cout << ": " << osmscout::UTF8StringToLocaleString(label);
-                                }
-
-                                const auto *lanes = dynamic_cast<const osmscout::LanesFeatureValue*>(value);
-                                if (lanes!=nullptr)
-                                {
-                                    //std::cout << " LANES: " << (int)lanes->GetLanes()<<std::endl;
-                                }
-
-                            }
-                            else {
-                                // std::cout << "   + feature " << feature->GetName() << ": "
-                                //           << osmscout::UTF8StringToLocaleString(value->GetLabel(osmscout::Locale(), 0))
-                                //           << std::endl;
-
-                                const auto *lanes = dynamic_cast<const osmscout::LanesFeatureValue*>(value);
-                                if (lanes!=nullptr)
-                                {
-                                    //std::cout << " LANES: " << (int)lanes->GetLanes()<<std::endl;
-                                }
-
-
-                                const auto *maxSpeed = dynamic_cast<const osmscout::MaxSpeedFeatureValue*>(value);
-                                if (maxSpeed!=nullptr)
-                                {
-                                    //std::cout << "MAXSPEED: " << (int)maxSpeed->GetMaxSpeed()<<std::endl;
-                                }
-                            }
-                        }
-                        else {
-                            //std::cout << "   + feature " << feature->GetName() << " NO_VALUE"<< std::endl;
-                        }
-                    }
-                }
-
-
-            }
-
-        }
-
-    }
+    _router->_intervalTime = _intervalTime;
 
 
     //_scene->paintDots(_graphRef);
@@ -480,7 +401,10 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
         //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
-        /*const auto&*/ _lastRoute = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm, true);
+        /*const auto&*/
+
+        _lastRoute = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm, true);
+        //_lastRoute = _router->findPathBellmanFord(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode);
 
     }
 
@@ -531,7 +455,7 @@ void MainWindow::compare(unsigned int numOfCars)
 void MainWindow::runSimulation(unsigned int numOfCars)
 {
     QRandomGenerator random(1234);
-    int size = _graphRef->size();
+    int graphSize = _graphRef->size();
     std::vector<int> path;
     std::vector<double> travelTimes;
     std::vector<std::vector<int>> routes;
@@ -552,20 +476,32 @@ void MainWindow::runSimulation(unsigned int numOfCars)
 
     unsigned int i = 0;
     int routeStartTime = _startTimeLineEdit->text().toInt();
-    for (i = 0; i < numOfCars; i++)
-    {
-        path = _router->findPathUniversal(398,543,routeStartTime,_intervalTime, PlanningMode::DriverInfluence, _algorithm, true);
-        routes.push_back(path);
-        // for (auto route : routes)
-        // {
+    while (i < numOfCars)
+    {// 398,543
+        int startNode = random.bounded(0,graphSize);
+        int targetNode = random.bounded(0,graphSize);
+        while (startNode == targetNode)
+        {
+            startNode = random.bounded(0,graphSize);
+            targetNode = random.bounded(0,graphSize);
+        }
 
-        // }
-        float travelTime = _router->getTravelTime();
-        travelTimes.push_back(travelTime);
+        path = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime, PlanningMode::DriverInfluence, _algorithm, true);
+        if (!path.empty())
+        {
+            routes.push_back(path);
+            // for (auto route : routes)
+            // {
 
-        out << routeStartTime << "," << travelTime << "\n";
+            // }
+            float travelTime = _router->getTravelTime();
+            travelTimes.push_back(travelTime);
 
-        routeStartTime += 2;
+            out << i+1 << "," << travelTime << "\n";
+
+            routeStartTime += 0;
+            i++;
+        }
     }
     double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
 

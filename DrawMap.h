@@ -18,8 +18,8 @@ struct Arguments {
     osmscout::Bearing angle;
     bool renderContourLines=true;
     bool renderHillShading=false;
-    std::string map;
-    std::string style;
+    std::string dbPath;
+    std::string stylePath;
 
     std::string output;
 
@@ -44,13 +44,13 @@ enum DrawMapArgParserWindowStyle
     ARG_WS_WINDOW
 };
 
-class DrawMapArgParser: public osmscout::CmdLineParser
+class DrawMapArgumentParser: public osmscout::CmdLineParser
 {
 private:
     Arguments args;
 
 public:
-    DrawMapArgParser(const std::string& appName,
+    DrawMapArgumentParser(const std::string& appName,
                      int argc, char* argv[],
                      double dpi,
                      DrawMapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
@@ -73,11 +73,11 @@ public:
         args.renderHillShading = false;
         AddPositional(osmscout::CmdLineStringOption(
                           [this](const std::string &value)
-                          { args.map = value; }),
+                          { args.dbPath = value; }),
                       "databaseDir", "Database directory");
         AddPositional(osmscout::CmdLineStringOption(
                           [this](const std::string &value)
-                          { args.style = value; }),
+                          { args.stylePath = value; }),
                       "stylesheet", "Map stylesheet");
         if (windowStyle == ARG_WS_CONSOLE)
         {
@@ -102,10 +102,10 @@ public:
     Arguments GetArguments() const { return args; }
 };
 
-class DrawMapDemo
+class DrawMap
 {
 public:
-    DrawMapArgParser argParser;
+    DrawMapArgumentParser argParser;
 
     osmscout::DatabaseParameter databaseParameter;
     osmscout::DatabaseRef       database;
@@ -120,7 +120,7 @@ public:
     osmscout::MapData             data;
 
 public:
-    DrawMapDemo(const std::string& appName,
+    DrawMap(const std::string& appName,
                 int argc, char* argv[],
                 double dpi=96.0,
                 DrawMapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
@@ -129,7 +129,7 @@ public:
 
     }
 
-    bool OpenDatabase()
+    bool openDatabase()
     {
         osmscout::CmdLineParseResult argResult=argParser.Parse();
         if (argResult.HasError()) {
@@ -148,7 +148,7 @@ public:
 
         database=std::make_shared<osmscout::Database>(databaseParameter);
 
-        if (!database->Open(args.map)) {
+        if (!database->Open(args.dbPath)) {
             std::cerr << "Cannot open db" << std::endl;
             return false;
         }
@@ -156,7 +156,7 @@ public:
         mapService=std::make_shared<osmscout::MapService>(database);
 
         styleConfig = std::make_shared<osmscout::StyleConfig>(database->GetTypeConfig());
-        if (!styleConfig->Load(args.style)) {
+        if (!styleConfig->Load(args.stylePath)) {
             std::cerr << "Cannot open style" << std::endl;
             return false;
         }
@@ -201,7 +201,7 @@ public:
         return true;
     }
 
-    void LoadData()
+    void loadData()
     {
         std::list<osmscout::TileRef> tiles;
 
@@ -221,10 +221,10 @@ public:
             data.srtmTile=mapService->GetSRTMData(projection);
         }
 
-        LoadBaseMapTiles(data.baseMapTiles);
+        //loadBaseMapTiles(data.baseMapTiles);
     }
 
-    bool LoadBaseMapTiles(std::list<osmscout::GroundTile> &tiles)
+    bool loadBaseMapTiles(std::list<osmscout::GroundTile> &tiles)
     {
         if (!basemapDatabase) {
             return true;

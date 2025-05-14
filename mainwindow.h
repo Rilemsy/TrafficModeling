@@ -22,7 +22,7 @@ public:
     ~MainWindow();
 
     void    setData();
-    void    paintPoint();
+    void    init();
     void    generateDensities();
     void    calculatePath();
     void    initDensities();
@@ -31,7 +31,6 @@ public:
     void    placeCars(int amount);
     void    moveMap(osmscout::GeoCoord coord);
     void    paintMap();
-    void    compare(unsigned int numOfCars);
     void    runSimulation(unsigned int numOfCars);
 
 private:
@@ -40,7 +39,7 @@ private:
     QLineEdit*          _startTimeLineEdit;
     GraphicsScene*      _scene;
     QListWidget*        _optionsList;
-    DrawMapDemo         _mapData;
+    DrawMap         _mapData;
     Arguments           _args;
     QPainter*           _painter;
     QPixmap*            _pixmap;

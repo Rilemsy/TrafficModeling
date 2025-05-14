@@ -130,8 +130,8 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     // _graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     // _graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     //setCentralWidget(graphicsView);
-    _graphicsView->setRenderHint(QPainter::Antialiasing); // Enable smooth rendering
-    _graphicsView->setDragMode(QGraphicsView::ScrollHandDrag); // Enable drag mode
+    _graphicsView->setRenderHint(QPainter::Antialiasing);
+    _graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
     _graphicsView->viewport()->installEventFilter(this);
     _scene->installEventFilter(this);
 
@@ -140,7 +140,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     auto size = _graphicsView->size();
 
-    _mapData.OpenDatabase();
+    _mapData.openDatabase();
     _args = _mapData.GetArguments();
     _router->setDatabase(_mapData.database);
     _scene->setProjections(&_mapData.projection);
@@ -164,7 +164,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
     {
         _intervalTime = timeIntervalLineEdit->text().toDouble();
-        _router->_intervalTime = _intervalTime;
+        _router->setIntervalTime(_intervalTime);
     });
 
     connect(timeMomentLineEdit, &QLineEdit::editingFinished, [this, timeMomentLineEdit]
@@ -204,7 +204,7 @@ void MainWindow::setData()
     osmscout::TypeInfoRef buildingType =
         _mapData.database->GetTypeConfig()->GetTypeInfo("building");
     _pixmap->fill(Qt::white);
-    _mapData.LoadData();
+    _mapData.loadData();
     if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
                            _mapData.data, _painter))
     {
@@ -212,7 +212,7 @@ void MainWindow::setData()
     }
 }
 
-void MainWindow::paintPoint()
+void MainWindow::init()
 {
     osmscout::GeoCoord pointFrom(55.6565, 41.8260);
     osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.6876, 42.6846));
@@ -223,7 +223,7 @@ void MainWindow::paintPoint()
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
     _router->generateDensities(_intervalTime);
-    _router->_intervalTime = _intervalTime;
+    _router->setIntervalTime(_intervalTime);
 
 
     //_scene->paintDots(_graphRef);
@@ -274,7 +274,7 @@ void MainWindow::changeMapZoom(double zoomFactor)
     _pixmap->fill(Qt::white);
     _painter = new QPainter(_pixmap);
     osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
-    _mapData.LoadData();
+    _mapData.loadData();
     if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
                            _mapData.data, _painter))
     {
@@ -309,7 +309,7 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
     _pixmap->fill(Qt::white);
     _painter = new QPainter(_pixmap);
     osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
-    _mapData.LoadData();
+    _mapData.loadData();
     if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
                            _mapData.data, _painter))
     {
@@ -418,40 +418,6 @@ void MainWindow::placeCars(int amount)
     //scene_->paintAllNodeIndexes(_graphRef);
 }
 
-void MainWindow::compare(unsigned int numOfCars)
-{
-    // QRandomGenerator random(1234);
-    // int size = _graphRef->size();
-    // std::vector<int> path;
-    // std::vector<double> travelTimes;
-    // unsigned int i = 0;
-    // for (i = 0; i < numOfCars; i++)
-    // {
-    //     path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::OnlyDistance, _algorithm);
-    //     if(_router->getCongestion())
-    //         break;
-    //     travelTimes.push_back(_router->getTravelTime());
-    // }
-    // double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
-
-    // //_router->pathListConst.clear();
-    // _router->generateDensities(_intervalTime);
-    // travelTimes.clear();
-    // for (unsigned int j = 0; j < i; j++)
-    // {
-    //     path = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, PlanningMode::DriverInfluence, _algorithm);
-    //     if(_router->getCongestion())
-    //         break;
-    //     travelTimes.push_back(_router->getTravelTime());
-    // }
-    // double avgTravelTimeInfluence = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
-    // //_router->pathListConst.clear();
-    // _router->generateDensities(_intervalTime);
-
-    // QMessageBox::information(this, "Title", QString("Default: %1, Influence: %2, NumOfCarsBeforeJam: %3").arg(avgTravelTimeDefault).arg(avgTravelTimeInfluence).arg(i));
-
-}
-
 void MainWindow::runSimulation(unsigned int numOfCars)
 {
     QRandomGenerator random(1234);
@@ -460,7 +426,7 @@ void MainWindow::runSimulation(unsigned int numOfCars)
     std::vector<double> travelTimes;
     std::vector<std::vector<int>> routes;
 
-    QFile file("simulation.csv");
+    QFile file("simulationD.csv");
     if (file.exists())
         file.remove();
 
@@ -486,7 +452,7 @@ void MainWindow::runSimulation(unsigned int numOfCars)
             targetNode = random.bounded(0,graphSize);
         }
 
-        path = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime, PlanningMode::DriverInfluence, _algorithm, true);
+        path = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime, PlanningMode::OnlyDistance, _algorithm, true);
         if (!path.empty())
         {
             routes.push_back(path);

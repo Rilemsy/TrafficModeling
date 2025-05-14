@@ -42,7 +42,10 @@ public:
         return value;
     }
 
-
+    void setIntervalTime(float time)
+    {
+        _intervalTime = time;
+    }
 
     void                loadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
                             osmscout::GeoCoord coord);
@@ -52,19 +55,19 @@ public:
     void                setMode(PlanningMode);
     void                setDatabase(osmscout::DatabaseRef database);
 
-    std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex);
-    std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
-    std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex);
-    std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime);
+    std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight);
+    std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight);
+    std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime);
+    std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime);
     std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm, bool densityUpdate);
-    std::vector<int>    findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode);
+    std::vector<int>    findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime);
+    std::vector<int>    findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime);
 
     float               trafficDiagrammFunctionTriangular(float density, float vf, short int lanes);
 
     float               calculateRouteCost(const std::vector<int>& route, int startTime, bool densityUpdate);
 
     //std::vector<Path>                   pathListConst;
-    float                               _intervalTime = 30;
 
 
 
@@ -78,7 +81,6 @@ private:
     std::vector<Node>                   _graph;
     std::vector<Path>                   _pathList;
     uint32_t                            _nodeCount;
-    PlanningMode                        _planningMode = PlanningMode::DriverInfluence;
     //const double                        MIN_PATH_LENGTH = 100;
     double                              _travelTime = 0;
     bool                                _congestion = false;
@@ -86,6 +88,8 @@ private:
 
     const int                           TIME_RANGE = 86400;  // 24 часа в секундах
     const int                           DENSITY_LIMIT = 120;
+    float                               _intervalTime = 30;
+
 };
 
 #endif // ROUTER_H

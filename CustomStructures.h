@@ -20,14 +20,13 @@ struct Node
 {
     osmscout::Point point;
     std::vector<unsigned int> paths;
-    double cost;
     bool isVisited = false;
 };
 
 enum class PlanningMode
 {
     OnlyDistance = 0,
-    DriverInfluence        // не особо важно, с historicaldata или с нулевыми плотностями
+    DriverInfluence
 };
 
 enum class Algorithm

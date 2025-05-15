@@ -32,18 +32,32 @@ public:
     {
         _projection = projection;
     }
+    void    setGraph(std::vector<Node>*  graph)
+    {
+        _graphRef = graph;
+    }
+    void    setPathList(std::vector<Path>*  pathList)
+    {
+        _pathListRef = pathList;
+    }
 
-    void    paintDots(std::vector<Node>* graph);
-    void    paintPath(std::vector<Node>* graph, const std::vector<int>&);
-    void    paintAllPathIndexes(std::vector<Node>* graph, std::vector<Path>* pathList);
-    void    paintAllNodeIndexes(std::vector<Node>* graph);
-    void    paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime, PlanningMode mode);
+
+    void    paintDots();
+    void    paintPath(const std::vector<int>&);
+    void    paintAllPathIndexes();
+    void    paintAllNodeIndexes();
+    void    paintCurrentTraffic(float currentTime, float intervalTime);
 
     osmscout::MercatorProjection*   _projection;
 
 private:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+
     QGraphicsPixmapItem             _pixmapItem;
     QGraphicsView*                  _graphicsView;
+    std::vector<Node>*              _graphRef;
+    std::vector<Path>*              _pathListRef;
+    short int                       _dotSize = 16;
 
 };
 

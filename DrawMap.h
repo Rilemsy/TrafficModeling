@@ -33,6 +33,7 @@ struct Arguments {
     osmscout::Magnification  zoom{osmscout::Magnification::magClose};
     osmscout::MapParameter::IconMode iconMode{osmscout::MapParameter::IconMode::FixedSizePixmap};
     std::list<std::string> iconPaths;
+    double      radious=1000.0;
 
     double fontSize{3.0};
     std::string fontName = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
@@ -60,44 +61,46 @@ public:
         args.debug = false;
         args.fontSize = 3.0;
         AddOption(osmscout::CmdLineDoubleOption([this](const double &value)
-                                                { args.angle = osmscout::Bearing::Degrees(value); }),
-                  "angle", "Rendering angle (in degrees)", false);
+                            { args.angle = osmscout::Bearing::Degrees(value); }),
+                            "angle", "Rendering angle (in degrees)", false);
         AddOption(osmscout::CmdLineStringOption(
-                      [this](const std::string &value)
-                      { args.fontName = value; }),
-                  "fontName", "Rendering font (" + args.fontName + ")", false);
+                            [this](const std::string &value)
+                            { args.fontName = value; }),
+                            "fontName", "Rendering font (" + args.fontName + ")", false);
         AddOption(osmscout::CmdLineStringOption([this](const std::string &value)
                                                 { args.iconPaths.push_back(value); }),
-                  "iconPath", "Icon lookup directory", false);
+                                                "iconPath", "Icon lookup directory", false);
         args.renderContourLines = false;
         args.renderHillShading = false;
         AddPositional(osmscout::CmdLineStringOption(
-                          [this](const std::string &value)
-                          { args.dbPath = value; }),
-                      "databaseDir", "Database directory");
+                            [this](const std::string &value)
+                            { args.dbPath = value; }),
+                            "databaseDir", "Database directory");
         AddPositional(osmscout::CmdLineStringOption(
-                          [this](const std::string &value)
-                          { args.stylePath = value; }),
-                      "stylesheet", "Map stylesheet");
+                            [this](const std::string &value)
+                            { args.stylePath = value; }),
+                            "stylesheet", "Map stylesheet");
         if (windowStyle == ARG_WS_CONSOLE)
         {
             AddPositional(osmscout::CmdLineSizeTOption(
-                              [this](const size_t &value)
-                              { args.width = value; }),
-                          "width", "Image width");
+                            [this](const size_t &value)
+                            { args.width = value; }),
+                            "width", "Image width");
             AddPositional(osmscout::CmdLineSizeTOption(
-                              [this](const size_t &value)
-                              { args.height = value; }),
-                          "height", "Image height");
+                            [this](const size_t &value)
+                            { args.height = value; }),
+                            "height", "Image height");
         }
-        AddPositional(
-            osmscout::CmdLineGeoCoordOption(
+        AddPositional(osmscout::CmdLineGeoCoordOption(
                 [this](const osmscout::GeoCoord &coord)
                 { args.center = coord; }),
-            "lat lon", "Rendering center");
+                "lat lon", "Rendering center");
         AddPositional(osmscout::CmdLineDoubleOption([this](const double &value)
                                                     { args.zoom.SetMagnification(value); }),
                       "zoom", "Rendering zoom");
+        AddPositional(osmscout::CmdLineDoubleOption([this](const double &value)
+                                                    { args.radious = value; }),
+                      "radious", "Network radious");
     }
     Arguments GetArguments() const { return args; }
 };

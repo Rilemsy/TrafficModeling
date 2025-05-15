@@ -8,7 +8,6 @@
 #include <QGuiApplication>
 #include <QApplication>
 #include <QScreen>
-#include <QVBoxLayout>
 #include <QPushButton>
 #include <QLineEdit>
 #include <QGroupBox>
@@ -18,10 +17,11 @@
 #include <QLabel>
 #include <QRandomGenerator>
 #include <QFile>
-#include <QComboBox>
 #include <QMessageBox>
 #include <QSpinBox>
 #include <QTextStream>
+#include <QStandardItemModel>
+#include <QHBoxLayout>
 
 #include <queue>
 #include <unordered_set>
@@ -38,78 +38,91 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         file.remove();
 
     QGroupBox* timeGroupBox = new QGroupBox(this);
-    QGridLayout* timeLayout = new QGridLayout;
+    QGridLayout* userLayout = new QGridLayout;
 
     QLabel* modelingTimeLabel = new QLabel("Время: " + (QString::number(_modelingTime)),timeGroupBox);
-    QLabel* startTimeLabel = new QLabel("Время начала поездки:");
-    _startTimeLineEdit = new QLineEdit(QString::number(_modelingTime),this);
-    QLabel* timeIntervalLabel = new QLabel("Интервал времени:");
+    QLabel* timeIntervalLabel = new QLabel("Интервал дискретизации:");
     QLineEdit* timeIntervalLineEdit = new QLineEdit(QString::number(_intervalTime),this);
     QPushButton* increaseTimeButton = new QPushButton("Увеличить время",this);
-    QPushButton* addCarButton = new QPushButton("Добавить автомобиль",this);
-    QPushButton* clearMapButton = new QPushButton("Очистить карту",this);
-    QLabel* modeNameLabel = new QLabel("Режим:", this);
+    QPushButton* decreaseTimeButton = new QPushButton("Уменьшить время",this);
+    QLabel* startNodeLabel = new QLabel("Начальный узел:");
+    _startNodeLineEdit = new QLineEdit(this);
+    QLabel* targetNodeLabel = new QLabel("Конечный узел:");
+    _targetNodeLineEdit = new QLineEdit(this);
+    QHBoxLayout* nodeLayout = new QHBoxLayout;
+    nodeLayout->addWidget(startNodeLabel);
+    nodeLayout->addWidget(_startNodeLineEdit);
+    nodeLayout->addWidget(targetNodeLabel);
+    nodeLayout->addWidget(_targetNodeLineEdit);
+
+    QPushButton* constructRouteButton = new QPushButton("Построить маршрут",this);
+    QLabel* modeNameLabel = new QLabel("Вес ребра:", this);
+    _weightTypeComboBox = new QComboBox(this);
+    _weightTypeComboBox->insertItems(0,{"Расстояние", "Время"});
+    _weightTypeComboBox->setCurrentIndex(0);
+    _updateDensitiesCheckBox = new QCheckBox("Учет влияния построенных маршрутов", this);
+
     QLabel* algorithmNameLabel = new QLabel("Алгоритм:", this);
-    QComboBox* modeComboBox = new QComboBox(this);
-    modeComboBox->insertItems(0,{"Только расстояние", "Исторические данные", "Влияние водителей"});
-    modeComboBox->setCurrentIndex(2);
-    QComboBox* algorithmComboBox = new QComboBox(this);
-    algorithmComboBox->insertItems(0,{"Алгоритм Дийкстры", "A*"});
-    algorithmComboBox->setCurrentIndex(1);
+    _algorithmComboBox = new QComboBox(this);
+    _algorithmComboBox->insertItems(0,{"Алгоритм Дейкстры", "A*", "Weighted A*", "Алгоритм Беллмана-Форда"});
+    _algorithmComboBox->setCurrentIndex(0);
+    QLabel* weigthLabel = new QLabel("Вес алгоритма Weighted A*:");
+    _weightLineEdit = new QLineEdit(QString::number(1),this);
+    QPushButton* resetButton = new QPushButton("Вернуть дороги с исходному состоянию",this);
 
-    QLabel* timeMomentLabel = new QLabel("Перейти к моменту времени:", this);
-    QLineEdit* timeMomentLineEdit = new QLineEdit(QString::number(_momentTime),this);
 
-    _optionsListWidget = new QListWidget(this);
-    QListWidgetItem* listItem = new QListWidgetItem("Показать номера узлов", _optionsListWidget);
-    listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable);
-    listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать номера путей", _optionsListWidget);
-    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
-    listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать трафик", _optionsListWidget);
-    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
-    listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать последний маршрут", _optionsListWidget);
-    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
-    listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать узлы", _optionsListWidget);
-    listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
-    listItem->setCheckState(Qt::Unchecked);
+    QGroupBox* optionsGroupBox = new QGroupBox(this);
+    _showTrafficCheckBox = new QCheckBox("Показать трафик",this);
+    _showLastRouteCheckBox = new QCheckBox("Показать последний маршрут",this);
+    _showNodesCheckBox = new QCheckBox("Показать узлы",this);
+    _showNodesIndexCheckBox = new QCheckBox("Показать номера узлов",this);
+    QVBoxLayout* optionsLayout = new QVBoxLayout;
+    optionsLayout->addWidget(_showTrafficCheckBox);
+    optionsLayout->addWidget(_showLastRouteCheckBox);
+    optionsLayout->addWidget(_showNodesCheckBox);
+    optionsLayout->addWidget(_showNodesIndexCheckBox);
+    optionsGroupBox->setLayout(optionsLayout);
 
+    QLabel* numOfCarsLabel = new QLabel("Количество автомобилей:", this);
     QSpinBox* numOfCarsSpinBox = new QSpinBox(this);
     numOfCarsSpinBox->setValue(10);
-    numOfCarsSpinBox->setRange(0, 1000000);
-    QPushButton* compareButton = new QPushButton("Сравнить",this);
-    connect(compareButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
+    numOfCarsSpinBox->setRange(0, 100000);
+    QPushButton* runButton = new QPushButton("Запустить",this);
+    connect(runButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
         {
             runSimulation(numOfCarsSpinBox->value());
         });
 
-    timeLayout->addWidget(startTimeLabel, 1, 0);
-    timeLayout->addWidget(timeIntervalLabel, 2, 0);
+    QLabel* resultLabel = new QLabel("Результат:",this);
+    _resultTextEdit = new QTextEdit(this);
 
-    timeLayout->addWidget(_startTimeLineEdit, 1, 1);
-    timeLayout->addWidget(timeIntervalLineEdit, 2, 1);
-    timeLayout->addWidget(modelingTimeLabel, 3, 0, 1, 2);
-    timeLayout->addWidget(increaseTimeButton, 4, 0, 1, 2);
-    timeLayout->addWidget(addCarButton, 5, 0, 1, 2);
-    timeLayout->addWidget(clearMapButton, 6, 0, 1, 2);
-    timeLayout->addWidget(modeNameLabel, 7, 0);
-    timeLayout->addWidget(modeComboBox, 7, 1);
-    timeLayout->addWidget(algorithmNameLabel, 8, 0);
-    timeLayout->addWidget(algorithmComboBox, 8, 1);
-    timeLayout->addWidget(timeMomentLabel, 9, 0);
-    timeLayout->addWidget(timeMomentLineEdit, 9, 1);
-    timeLayout->addWidget(_optionsListWidget, 10, 0, 1, 2);
-    timeLayout->addWidget(numOfCarsSpinBox, 11, 0);
-    timeLayout->addWidget(compareButton, 11, 1);
+    userLayout->addWidget(modelingTimeLabel, 1, 0, 1, 2);
+    userLayout->addWidget(timeIntervalLabel, 2, 0);
+    userLayout->addWidget(timeIntervalLineEdit, 2, 1);
+    userLayout->addWidget(increaseTimeButton, 4, 0);
+    userLayout->addWidget(decreaseTimeButton, 4, 1);
+    userLayout->addWidget(modeNameLabel, 5, 0);
+    userLayout->addWidget(_weightTypeComboBox, 5, 1);
+    userLayout->addWidget(algorithmNameLabel, 6, 0);
+    userLayout->addWidget(_algorithmComboBox, 6, 1);
+    userLayout->addWidget(weigthLabel, 7, 0);
+    userLayout->addWidget(_weightLineEdit, 7, 1);
+    userLayout->addWidget(_updateDensitiesCheckBox, 8, 0, 1, 2);
+    userLayout->addLayout(nodeLayout, 9, 0, 1, 2);
+    userLayout->addWidget(constructRouteButton, 10, 0, 1, 2);
+    userLayout->addWidget(optionsGroupBox, 11, 0, 1, 2);
+    userLayout->addWidget(resetButton, 12, 0, 1, 2);
+    userLayout->addWidget(numOfCarsLabel, 13, 0);
+    userLayout->addWidget(numOfCarsSpinBox, 13, 1);
+    userLayout->addWidget(runButton, 14, 0, 1, 2);
+    userLayout->addWidget(resultLabel, 15, 0);
+    userLayout->addWidget(_resultTextEdit, 16, 0, 1, 2);
 
-    timeLayout->setColumnStretch(timeLayout->columnCount(), 1);
-    timeLayout->setRowStretch(timeLayout->rowCount(), 1);
+    userLayout->setColumnStretch(userLayout->columnCount(), 1);
+    userLayout->setRowStretch(userLayout->rowCount(), 1);
     //timeLayout->addStretch(1);
 
-    timeGroupBox->setLayout(timeLayout);
+    timeGroupBox->setLayout(userLayout);
 
 
     _scene = new GraphicsScene();
@@ -153,46 +166,71 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
     });
 
-    connect(addCarButton, &QPushButton::clicked, [this]
+    connect(decreaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
     {
-        this->placeCars(1);
+        int res = _modelingTime - _intervalTime;
+        if (res <= 0)
+            _modelingTime = 0;
+        else
+            _modelingTime -= _intervalTime;
+        modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
+    });
+
+    connect(constructRouteButton, &QPushButton::clicked, [this]
+    {
+        Route route;
+        if(!_startNodeLineEdit->text().isEmpty() && !_targetNodeLineEdit->text().isEmpty())
+        {
+            route = findPath(_startNodeLineEdit->text().toInt(), _targetNodeLineEdit->text().toInt(), 0, _updateDensitiesCheckBox->isChecked());
+        }
+        else
+        {
+            QMessageBox::warning(this, "Предупреждение", "Узел не найден. Повторите ввод.");
+            return;
+        }
+        if(!route.constructedRoute.empty())
+        {
+            //_scene->paintPath(route.constructedRoute);
+            _lastRoute = route.constructedRoute;
+            QMessageBox::information(this,"Информация", "Маршрут построен.");
+            paintMap();
+        }
+        else
+            QMessageBox::information(this,"Информация", "Маршрут не найден.");
     });
 
     connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
     {
-        _intervalTime = timeIntervalLineEdit->text().toDouble();
+        _intervalTime = timeIntervalLineEdit->text().toInt();
         _router->setIntervalTime(_intervalTime);
     });
 
-    connect(timeMomentLineEdit, &QLineEdit::editingFinished, [this, timeMomentLineEdit]
+    connect(_showLastRouteCheckBox, &QCheckBox::stateChanged, [this]
     {
-        _momentTime = timeMomentLineEdit->text().toDouble();
-    });
-
-    connect(modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
-    {
-        _planningMode = static_cast<PlanningMode>(index);
-    });
-
-    connect(algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
-    {
-        _algorithm = static_cast<Algorithm>(index);
-    });
-
-    connect(_router, &Router::message, [this](QString str)
-    {
-        QMessageBox::warning(this, "Warning", str);
-    });
-    connect(_optionsListWidget, &QListWidget::itemChanged, [this](QListWidgetItem* item)
-    {
-        int currentRow = _optionsListWidget->row(item);
-        int option = std::pow(2,currentRow) ;
-        if (currentRow == 0)
-            _options.setFlag(ShowNodeNumber, item->checkState());
-        else
-            _options.setFlag(static_cast<Option>(option), item->checkState());
         paintMap();
     });
+
+    connect(_showNodesCheckBox, &QCheckBox::stateChanged, [this]
+    {
+        paintMap();
+    });
+
+    connect(_showTrafficCheckBox, &QCheckBox::stateChanged, [this]
+    {
+        paintMap();
+    });
+
+
+    // connect(_weightTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+    // {
+    //     _planningMode = static_cast<WeightType>(index);
+    // });
+
+    // connect(algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+    // {
+    //     _algorithm = static_cast<Algorithm>(index);
+    // });
+
 }
 
 void MainWindow::setData()
@@ -211,17 +249,21 @@ void MainWindow::setData()
 
 void MainWindow::initGraph()
 {
-    osmscout::GeoCoord pointFrom(55.6565, 41.8260);
-    osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.6876, 42.6846));
-    _router->loadDataNodes(_args, dist, pointFrom);
+    osmscout::Distance dist(osmscout::Distance::Of<osmscout::Meter>(_args.radious));
+    _router->loadDataNodes(_args, dist, _args.center);
     _router->setupGraphFromNodes();
 
     //auto& graph = router_->getGraph();
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
+    _scene->setGraph(_graphRef);
+    _scene->setPathList(_pathListRef);
     _router->generateDensities(_intervalTime);
     _router->setIntervalTime(_intervalTime);
 
+    QIntValidator* nodeValidator = new QIntValidator(0, _graphRef->size()-1, this);
+    _startNodeLineEdit->setValidator(nodeValidator);
+    _targetNodeLineEdit->setValidator(nodeValidator);
 
     //_scene->paintDots(_graphRef);
 
@@ -262,16 +304,14 @@ void MainWindow::changeMapZoom(double zoomFactor)
     }
     //paintMap();
 
-    if (_options.testFlag(ShowNodeDot))
-        _scene->paintDots(_graphRef);
-    if (_options.testFlag(ShowNodeNumber))
-        _scene->paintAllNodeIndexes(_graphRef);
-    if (_options.testFlag(ShowEdgeNumber))
-        _scene->paintAllPathIndexes(_graphRef, _pathListRef);
-    if (_options.testFlag(ShowTraffic))
-        _scene->paintCurrentTraffic(_graphRef,_pathListRef, _modelingTime,_intervalTime, _planningMode);
-    if (_options.testFlag(ShowLastRoute))
-        _scene->paintPath(_graphRef,_lastRoute);
+    if (_showNodesCheckBox->isChecked())
+        _scene->paintDots();
+    if (_showTrafficCheckBox->isChecked())
+        _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
+    if (_showLastRouteCheckBox->isChecked())
+        _scene->paintPath(_lastRoute);
+    if (_showNodesIndexCheckBox->isChecked())
+        _scene->paintAllNodeIndexes();
 
 }
 
@@ -297,16 +337,14 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
     }
     //paintMap();
 
-    if (_options.testFlag(ShowNodeDot))
-        _scene->paintDots(_graphRef);
-    if (_options.testFlag(ShowNodeNumber))
-        _scene->paintAllNodeIndexes(_graphRef);
-    if (_options.testFlag(ShowEdgeNumber))
-        _scene->paintAllPathIndexes(_graphRef, _pathListRef);
-    if (_options.testFlag(ShowTraffic))
-        _scene->paintCurrentTraffic(_graphRef,_pathListRef, _modelingTime,_intervalTime, _planningMode);
-    if (_options.testFlag(ShowLastRoute))
-        _scene->paintPath(_graphRef,_lastRoute);
+    if (_showNodesCheckBox->isChecked())
+        _scene->paintDots();
+    if (_showTrafficCheckBox->isChecked())
+        _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
+    if (_showLastRouteCheckBox->isChecked())
+        _scene->paintPath(_lastRoute);
+    if (_showNodesIndexCheckBox->isChecked())
+        _scene->paintAllNodeIndexes();
 
 }
 
@@ -315,18 +353,6 @@ void MainWindow::paintMap()
     _scene->clearMap();
     _scene->clear();
     changeMapZoom(1);
-
-    // if (_options.testFlag(ShowNodeDot))
-    //     _scene->paintDots(_graphRef);
-    // if (_options.testFlag(ShowNodeNumber))
-    //     _scene->paintAllNodeIndexes(_graphRef);
-    // if (_options.testFlag(ShowEdgeNumber))
-    //     _scene->paintAllPathIndexes(_graphRef, _pathListRef);
-    // if (_options.testFlag(ShowTraffic))
-    //     _scene->paintCurrentTraffic(_graphRef,_pathListRef, _modelingTime,_intervalTime, _planningMode);
-    // if (_options.testFlag(ShowLastRoute))
-    //     _scene->paintPath(_graphRef,_lastRoute);
-
 }
 
 bool MainWindow::eventFilter(QObject *object, QEvent *e)
@@ -363,33 +389,52 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
     return false;
 }
 
-void MainWindow::placeCars(int amount)
+Route MainWindow::findPath(int startNodeIndex, int endNodeIndex, int startTime, bool densityUpdate)
 {
-    QRandomGenerator random(1234);
-    int size = _graphRef->size();
-    std::vector<int> path;
-    for (int i = 0; i < amount; i++)
+    WeightType weightType = static_cast<WeightType>(_weightTypeComboBox->currentIndex());
+    Algorithm algorithm = static_cast<Algorithm>(_algorithmComboBox->currentIndex());
+    float weight = _weightLineEdit->text().toFloat();
+    Route route;
+
+    switch (algorithm)
     {
-        //const auto& path = router_->findPathAStarTime(random.bounded(0, size),random.bounded(0, size),_startTimeLineEdit->text().toInt(),_intervalTime);
-        //const auto& path = router_->findPathAStarTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
-        //const auto& path = router_->findPathDijkstraTime(844,2,_startTimeLineEdit->text().toInt(),_intervalTime);
-        //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
-        /*const auto&*/
-
-        auto route = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm, true);
-        _lastRoute = route.constructedRoute;
-        //_lastRoute = _router->findPathBellmanFord(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode);
-
+    case Algorithm::Dijkstra:
+    {
+        if(weightType == WeightType::Distance)
+            route = _router->findPathDijkstra(startNodeIndex, endNodeIndex, startTime, densityUpdate);
+        else
+            route = _router->findPathDijkstraTime(startNodeIndex, endNodeIndex, startTime, densityUpdate);
+        break;
+    }
+    case Algorithm::AStar:
+    {
+        if(weightType == WeightType::Distance)
+            route = _router->findPathAStar(startNodeIndex, endNodeIndex, startTime, 1, densityUpdate);
+        else
+            route = _router->findPathAStarTime(startNodeIndex, endNodeIndex, startTime, 1, densityUpdate);
+        break;
+    }
+    case Algorithm::WeightedAStar:
+    {
+        if(weightType == WeightType::Distance)
+            route = _router->findPathAStar(startNodeIndex, endNodeIndex, startTime, weight, densityUpdate);
+        else
+            route = _router->findPathAStarTime(startNodeIndex, endNodeIndex, startTime, weight, densityUpdate);
+        break;
+    }
+    case Algorithm::BellManFord:
+    {
+        if(weightType == WeightType::Distance)
+            route = _router->findPathBellmanFord(startNodeIndex, endNodeIndex, startTime, densityUpdate);
+        else
+            route = _router->findPathBellmanFordTime(startNodeIndex, endNodeIndex, startTime, densityUpdate);
+        break;
+    }
+    default:
+        break;
     }
 
-    paintMap();
-
-    // _scene->clearMap();
-    // _scene->clear();
-    // changeMapZoom(1);
-    // _scene->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime, _planningMode);
-    // _scene->paintPath(_graphRef, _lastRoute);
-    //scene_->paintAllNodeIndexes(_graphRef);
+    return route;
 }
 
 void MainWindow::runSimulation(unsigned int numOfCars)
@@ -400,7 +445,14 @@ void MainWindow::runSimulation(unsigned int numOfCars)
     std::vector<double> travelTimes;
     std::vector<std::vector<int>> routes;
 
-    QFile file("simulationD.csv");
+    WeightType weightType = static_cast<WeightType>(_weightTypeComboBox->currentIndex());
+    QFile file;
+
+    if(weightType == WeightType::Distance)
+        file.setFileName("simulationDistance.csv");
+    else
+        file.setFileName("simulationTime.csv");
+
     if (file.exists())
         file.remove();
 
@@ -412,10 +464,13 @@ void MainWindow::runSimulation(unsigned int numOfCars)
         out.setDevice(&file);
     }
 
+    _router->setIntervalTime(_intervalTime);
     _router->generateDensities(_intervalTime);
 
     unsigned int i = 0;
-    int routeStartTime = _startTimeLineEdit->text().toInt();
+    int routeStartTime = 0;
+    bool densityUpdate = _updateDensitiesCheckBox->isChecked();
+
     while (i < numOfCars)
     {// 398,543
         int startNode = random.bounded(0,graphSize);
@@ -426,7 +481,10 @@ void MainWindow::runSimulation(unsigned int numOfCars)
             targetNode = random.bounded(0,graphSize);
         }
 
-        auto route = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime, PlanningMode::OnlyDistance, _algorithm, true);
+        auto route = findPath(startNode,targetNode,routeStartTime, densityUpdate);
+        //auto route = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime,weightType,Algorithm::AStar, densityUpdate);
+        //std::cout << startNode << std::endl;
+        path = route.constructedRoute;
         if (!path.empty())
         {
             routes.push_back(route.constructedRoute);
@@ -443,7 +501,7 @@ void MainWindow::runSimulation(unsigned int numOfCars)
         }
     }
     double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
-
+    QMessageBox::information(this, "Информация","Моделирование завершено.");
 }
 
 MainWindow::~MainWindow()

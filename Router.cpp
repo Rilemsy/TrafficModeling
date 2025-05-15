@@ -103,6 +103,8 @@ void Router::setupGraphFromNodes()
                                 if (maxSpeed!=nullptr)
                                 {
                                     path.maxSpeed = (int)maxSpeed->GetMaxSpeed();
+                                    if (path.maxSpeed > _maxspeed)
+                                        _maxspeed = path.maxSpeed;
                                 }
                             }
                         }
@@ -144,7 +146,7 @@ void Router::setDatabase(osmscout::DatabaseRef database)
     _database = database;
 }
 
-Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight)
+Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool densityUpdate)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -208,11 +210,6 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTi
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
-            ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
-        if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
-            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
-
         route.push_back(at);
         paths.push_back(curPathIndex);
         at = previous[at].first;
@@ -221,13 +218,13 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTi
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
-    auto travelTime = calculateRouteCost(paths, startTime, true);
+    auto travelTime = calculateRouteCost(paths, startTime, densityUpdate);
     float execTime = 0;
 
     return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-Route Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight)
+Route Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool densityUpdate)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -259,9 +256,9 @@ Route Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int sta
             double h = 0, pathCost = 0, density = 0;
 
             density = path.densities[std::floor(gScore[currentIndex]/_intervalTime)];
-            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
+            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed);
             pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
-            h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / path.maxSpeed) * 3600 * weight;
+            h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / _maxspeed) * 3600 * weight;
 
             double tentativeGScore = gScore[currentIndex] + pathCost;
 
@@ -292,11 +289,13 @@ Route Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int sta
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
-            ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
-        if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
-            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
-
+        if (densityUpdate)
+        {
+            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
+                ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
+            if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
+                _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
+        }
         route.push_back(at);
         paths.push_back(curPathIndex);
         at = previous[at].first;
@@ -312,7 +311,7 @@ Route Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int sta
     return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -373,11 +372,6 @@ Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int star
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
-                                                                                                    ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
-        if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
-            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
-
         route.push_back(at);
         paths.push_back(curPathIndex);
         at = previous[at].first;
@@ -386,14 +380,14 @@ Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int star
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
-    auto travelTime = calculateRouteCost(paths, startTime, true);
+    auto travelTime = calculateRouteCost(paths, startTime, densityUpdate);
 
     float execTime = 0;
 
     return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-Route Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -425,7 +419,7 @@ Route Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int 
             double pathCost = 0, density = 0;
 
             density = path.densities[std::floor(gScore[currentIndex]/_intervalTime)];
-            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
+            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed);
             pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
 
             double tentativeGScore = gScore[currentIndex] + pathCost;
@@ -457,11 +451,13 @@ Route Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int 
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
-            ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
-        if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
-            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
-
+        if(densityUpdate)
+        {
+            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
+                ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
+            if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
+                _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
+        }
         route.push_back(at);
         paths.push_back(curPathIndex);
         at = previous[at].first;
@@ -477,7 +473,7 @@ Route Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int 
     return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode planningMode, Algorithm algorithm, bool densityUpdate)
+Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, WeightType planningMode, Algorithm algorithm, bool densityUpdate)
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
@@ -494,13 +490,13 @@ Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int sta
 
     switch(planningMode)
     {
-    case PlanningMode::OnlyDistance:
+    case WeightType::Distance:
     {
         gScore[startNodeIndex] = 0;
         priorityQueue.push({startNodeIndex, 0});
         break;
     }
-    case PlanningMode::DriverInfluence:
+    case WeightType::Time:
     {
         gScore[startNodeIndex] = startTime;
         priorityQueue.push({startNodeIndex, startTime});
@@ -525,19 +521,19 @@ Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int sta
 
             switch (planningMode)
             {
-            case PlanningMode::OnlyDistance:
+            case WeightType::Distance:
             {
                 pathCost = path.distanceLength.AsMeter() / 1000.0;
                 h = _graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0;
                 break;
             }
-            case PlanningMode::DriverInfluence:
+            case WeightType::Time:
             {
                 density = path.densities[std::floor(gScore[currentIndex]/intervalTime)];
-                auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
+                auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed);
                 pathCost = ((_pathList[pathIndex].distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
                 if (algorithm == Algorithm::AStar)
-                    h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / path.maxSpeed)*3600;
+                    h = (double(_graph[neighborIndex].point.GetCoord().GetDistance(_graph[targetNodeIndex].point.GetCoord()).AsMeter() / 1000.0) / _maxspeed)*3600;
                 break;
             }
             default:
@@ -596,12 +592,12 @@ Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int sta
 
     switch(planningMode)
     {
-    case PlanningMode::OnlyDistance:
+    case WeightType::Distance:
     {
         travelTime = calculateRouteCost(paths, startTime, true);
         break;
     }
-    case PlanningMode::DriverInfluence:
+    case WeightType::Time:
     {
         float routeCost = gScore[route.back()];
         travelTime = routeCost - startTime;
@@ -615,7 +611,7 @@ Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int sta
     return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate)
 {
     std::unordered_map<int, double> gScore;         // стоимость
     std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
@@ -659,11 +655,6 @@ Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int s
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
-            ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
-        if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
-            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
-
         route.push_back(at);
         paths.push_back(curPathIndex);
         at = previous[at].first;
@@ -672,14 +663,14 @@ Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int s
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
-    auto travelTime = calculateRouteCost(paths, startTime, true);
+    auto travelTime = calculateRouteCost(paths, startTime, densityUpdate);
 
     float execTime = 0;
 
     return {route, travelTime, execTime};
 }
 
-Route Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate)
 {
     std::unordered_map<int, double> gScore;         // стоимость
     std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
@@ -696,7 +687,7 @@ Route Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, i
             float density = 0;
 
             density = path.densities[std::floor(gScore[path.startNodeIndex]/_intervalTime)];
-            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
+            auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed);
             pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
             break;
 
@@ -727,11 +718,12 @@ Route Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, i
     for (int at = targetNodeIndex; at != startNodeIndex; )
     {
         auto curPathIndex = previous[at].second;
-        _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /
-                                                                                                    ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
-        if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
-            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
-
+        if (densityUpdate)
+        {
+            _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] += float(numberOfCars) /                                                                                                       ((_pathList[curPathIndex].distanceLength.AsMeter()/1000)*_pathList[curPathIndex].lanes);
+            if (_pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] > DENSITY_LIMIT)
+                _pathList[curPathIndex].densities[std::floor(gScore[previous[at].first]/_intervalTime)] = DENSITY_LIMIT;
+        }
         route.push_back(at);
         paths.push_back(curPathIndex);
         at = previous[at].first;
@@ -748,7 +740,7 @@ Route Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, i
     return {route, travelTime, execTime};
 }
 
-float Router::trafficDiagrammFunctionTriangular(float p, float vf, short int lanes)
+float Router::trafficDiagrammFunctionTriangular(float p, float vf)
 {
     float pj = 134;
     float pc = 24;
@@ -757,8 +749,6 @@ float Router::trafficDiagrammFunctionTriangular(float p, float vf, short int lan
     if (p > DENSITY_LIMIT)
     {
         p = DENSITY_LIMIT;
-        //_congestion = true;
-        //emit message("Density >= 120");
     }
 
     if (p <= pc) // km/h
@@ -774,7 +764,7 @@ float Router::calculateRouteCost(const std::vector<int>& route, int startTime, b
     {
         Path path = _pathList[pathIndex];
         float density = path.densities[std::floor((travelTime+startTime)/_intervalTime)];
-        auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed, path.lanes);
+        auto diagramRes = trafficDiagrammFunctionTriangular(density, path.maxSpeed);
         float pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
         if (densityUpdate)/*(_pathList[curPathIndex].distanceLength.AsMeter() >= MIN_PATH_LENGTH)*/
         {

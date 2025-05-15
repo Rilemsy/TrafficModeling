@@ -31,16 +31,18 @@ struct Route
     unsigned int visitedNodeCount = 0;
 };
 
-enum class PlanningMode
+enum class WeightType
 {
-    OnlyDistance = 0,
-    DriverInfluence
+    Distance = 0,
+    Time
 };
 
 enum class Algorithm
 {
     Dijkstra = 0,
-    AStar
+    AStar,
+    WeightedAStar,
+    BellManFord
 };
 
 enum Option

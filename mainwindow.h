@@ -22,9 +22,7 @@ public:
     ~MainWindow();
 
     void    setData();
-    void    init();
-    void    generateDensities();
-    void    calculatePath();
+    void    initGraph();
     void    initDensities();
     bool    eventFilter(QObject *object, QEvent *e);
     void    changeMapZoom(double zoomFactor);
@@ -38,8 +36,8 @@ private:
     QGraphicsView*      _graphicsView;
     QLineEdit*          _startTimeLineEdit;
     GraphicsScene*      _scene;
-    QListWidget*        _optionsList;
-    DrawMap         _mapData;
+    QListWidget*        _optionsListWidget;
+    DrawMap             _mapData;
     Arguments           _args;
     QPainter*           _painter;
     QPixmap*            _pixmap;

@@ -23,6 +23,14 @@ struct Node
     bool isVisited = false;
 };
 
+struct Route
+{
+    std::vector<int> constructedRoute;
+    float cost = 0;
+    float execTime = 0;
+    unsigned int visitedNodeCount = 0;
+};
+
 enum class PlanningMode
 {
     OnlyDistance = 0,

@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
                  QGuiApplication::primaryScreen()->physicalDotsPerInch());;
     w.setWindowState(Qt::WindowMaximized);
     w.setData();
-    w.init();
+    w.initGraph();
     w.show();
     return a.exec();
 }

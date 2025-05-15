@@ -4,7 +4,6 @@
 #include <osmscoutmapqt/MapPainterQt.h>
 
 #include <iostream>
-#include <libsumo/libtraci.h>
 
 #include <QGuiApplication>
 #include <QApplication>
@@ -28,8 +27,6 @@
 #include <unordered_set>
 
 #include "mainwindow.h"
-
-using namespace libtraci;
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     : QMainWindow(parent),
@@ -63,20 +60,20 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QLabel* timeMomentLabel = new QLabel("Перейти к моменту времени:", this);
     QLineEdit* timeMomentLineEdit = new QLineEdit(QString::number(_momentTime),this);
 
-    _optionsList = new QListWidget(this);
-    QListWidgetItem* listItem = new QListWidgetItem("Показать номера узлов", _optionsList);
+    _optionsListWidget = new QListWidget(this);
+    QListWidgetItem* listItem = new QListWidgetItem("Показать номера узлов", _optionsListWidget);
     listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable);
     listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать номера путей", _optionsList);
+    listItem = new QListWidgetItem("Показать номера путей", _optionsListWidget);
     listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
     listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать трафик", _optionsList);
+    listItem = new QListWidgetItem("Показать трафик", _optionsListWidget);
     listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
     listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать последний маршрут", _optionsList);
+    listItem = new QListWidgetItem("Показать последний маршрут", _optionsListWidget);
     listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
     listItem->setCheckState(Qt::Unchecked);
-    listItem = new QListWidgetItem("Показать узлы", _optionsList);
+    listItem = new QListWidgetItem("Показать узлы", _optionsListWidget);
     listItem->setFlags(Qt::ItemIsUserCheckable | listItem->flags());
     listItem->setCheckState(Qt::Unchecked);
 
@@ -104,7 +101,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     timeLayout->addWidget(algorithmComboBox, 8, 1);
     timeLayout->addWidget(timeMomentLabel, 9, 0);
     timeLayout->addWidget(timeMomentLineEdit, 9, 1);
-    timeLayout->addWidget(_optionsList, 10, 0, 1, 2);
+    timeLayout->addWidget(_optionsListWidget, 10, 0, 1, 2);
     timeLayout->addWidget(numOfCarsSpinBox, 11, 0);
     timeLayout->addWidget(compareButton, 11, 1);
 
@@ -143,7 +140,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     _mapData.openDatabase();
     _args = _mapData.GetArguments();
     _router->setDatabase(_mapData.database);
-    _scene->setProjections(&_mapData.projection);
+    _scene->setProjection(&_mapData.projection);
     _pixmap = new QPixmap(static_cast<int>(_args.width),
                           static_cast<int>(_args.height));
     _painter = new QPainter(_pixmap);
@@ -186,9 +183,9 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         QMessageBox::warning(this, "Warning", str);
     });
-    connect(_optionsList, &QListWidget::itemChanged, [this](QListWidgetItem* item)
+    connect(_optionsListWidget, &QListWidget::itemChanged, [this](QListWidgetItem* item)
     {
-        int currentRow = _optionsList->row(item);
+        int currentRow = _optionsListWidget->row(item);
         int option = std::pow(2,currentRow) ;
         if (currentRow == 0)
             _options.setFlag(ShowNodeNumber, item->checkState());
@@ -212,7 +209,7 @@ void MainWindow::setData()
     }
 }
 
-void MainWindow::init()
+void MainWindow::initGraph()
 {
     osmscout::GeoCoord pointFrom(55.6565, 41.8260);
     osmscout::Distance dist = pointFrom.GetDistance(osmscout::GeoCoord(55.6876, 42.6846));
@@ -241,23 +238,6 @@ void MainWindow::init()
     //const auto& path = router_->findPathDijkstra(844,2);
     //scene_->paintPath(_graphRef, path);
     //placeCars(24);
-}
-
-void MainWindow::generateDensities()
-{
-    // auto gauseFunction = [](unsigned int t, double rPeak1, unsigned int tPeak1, double sPeak1, double rPeak2, unsigned int tPeak2, double sPeak2)
-    //     { return rPeak1*exp(-((t-tPeak1)/(2*sPeak1*sPeak1))) +  rPeak2*exp(-((t-tPeak2)/(2*sPeak2*sPeak2))); };
-    // int time = 0; // in hours
-    // for (auto& node : graph)
-    // {
-
-    // }
-}
-
-void MainWindow::calculatePath()
-{
-    auto compare = [](std::pair<int , double> a, std::pair<int , double> b) { return a.second < b.second; };
-    std::priority_queue<std::pair<int , double>, std::vector<std::pair<int , double>>, decltype(compare)> openSet(compare);
 }
 
 void MainWindow::changeMapZoom(double zoomFactor)
@@ -366,7 +346,6 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
             {
                 changeMapZoom(1.0 / scaleZoom);
             }
-            //event->accept();
             return true;
         }
     }
@@ -375,18 +354,12 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
         auto event = static_cast<QGraphicsSceneMouseEvent*>(e);
         if (event->buttons() & Qt::RightButton)
         {
-            //auto localPoint = event->localPos();
-            auto widgetPos = event->pos();
-            auto viewportSize = _graphicsView->viewport()->size();
-            auto viewSize = _graphicsView->size();
             osmscout::GeoCoord coord;
-            _scene->projection_->PixelToGeo(event->scenePos().x(), event->scenePos().y(), coord);
-            //_scene->projection_->PixelToGeo(localPoint.x() + viewSize.width() - viewportSize.width(),localPoint.y() + viewSize.height() - viewportSize.height(), coord);
+            _scene->_projection->PixelToGeo(event->scenePos().x(), event->scenePos().y(), coord);
             moveMap(coord);
             return true;
         }
     }
-
     return false;
 }
 
@@ -403,7 +376,8 @@ void MainWindow::placeCars(int amount)
         //const auto& path = router_->findPathUniversal(844,2,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm);
         /*const auto&*/
 
-        _lastRoute = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm, true);
+        auto route = _router->findPathUniversal(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode, _algorithm, true);
+        _lastRoute = route.constructedRoute;
         //_lastRoute = _router->findPathBellmanFord(398,543,_startTimeLineEdit->text().toInt(),_intervalTime, _planningMode);
 
     }
@@ -452,18 +426,17 @@ void MainWindow::runSimulation(unsigned int numOfCars)
             targetNode = random.bounded(0,graphSize);
         }
 
-        path = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime, PlanningMode::OnlyDistance, _algorithm, true);
+        auto route = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime, PlanningMode::OnlyDistance, _algorithm, true);
         if (!path.empty())
         {
-            routes.push_back(path);
+            routes.push_back(route.constructedRoute);
             // for (auto route : routes)
             // {
 
             // }
-            float travelTime = _router->getTravelTime();
-            travelTimes.push_back(travelTime);
+            travelTimes.push_back(route.cost);
 
-            out << i+1 << "," << travelTime << "\n";
+            out << i+1 << "," << route.cost << "\n";
 
             routeStartTime += 0;
             i++;

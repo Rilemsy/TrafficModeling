@@ -26,11 +26,11 @@ public:
     ~GraphicsScene(){};
 
     void    setMap(QPixmap *value);
-    void    setView(QGraphicsView *view) { view_ = view; }
+    void    setView(QGraphicsView *view) { _graphicsView = view; }
     void    clearMap();
-    void    setProjections(osmscout::MercatorProjection *projection)
+    void    setProjection(osmscout::MercatorProjection *projection)
     {
-        projection_ = projection;
+        _projection = projection;
     }
 
     void    paintDots(std::vector<Node>* graph);
@@ -39,11 +39,11 @@ public:
     void    paintAllNodeIndexes(std::vector<Node>* graph);
     void    paintCurrentTraffic(std::vector<Node>* graph, std::vector<Path>* pathList, float currentTime, float intervalTime, PlanningMode mode);
 
-    osmscout::MercatorProjection*   projection_;
+    osmscout::MercatorProjection*   _projection;
 
 private:
-    QGraphicsPixmapItem             pixmapItem_;
-    QGraphicsView*                  view_;
+    QGraphicsPixmapItem             _pixmapItem;
+    QGraphicsView*                  _graphicsView;
 
 };
 

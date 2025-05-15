@@ -16,11 +16,12 @@ void Router::loadDataNodes(const Arguments &args,
 {
     try
     {
-        if (!_routeReader.IsOpen())
-        {
-            openFile(args);
-        }
-        _nodeList.clear();
+        _routeReader.Open(args.dbPath + "router.dat", osmscout::FileScanner::Sequential, true);
+        _routeReader.ReadFileOffset();
+        _nodeCount = _routeReader.ReadUInt32();
+        _routeReader.ReadUInt32();
+        _nodeList.reserve(_nodeCount);
+
         for (uint32_t i = 1; i <= _nodeCount; ++i)
         {
             osmscout::RouteNode node;
@@ -28,7 +29,7 @@ void Router::loadDataNodes(const Arguments &args,
             size_t validPaths = 0;                                              /////////////
             for (const auto &path : node.paths)
             {
-                if (path.IsUsable(_vehicle) && !path.IsRestricted(_vehicle))
+                if (path.IsUsable(osmscout::vehicleCar) && !path.IsRestricted(osmscout::vehicleCar))
                 {
                     ++validPaths;
                 }
@@ -69,7 +70,7 @@ void Router::setupGraphFromNodes()
 
         for (const auto &routePath : routeNode.paths)
         {
-            if (!routePath.IsUsable(_vehicle) || routePath.IsRestricted(_vehicle))
+            if (!routePath.IsUsable(osmscout::vehicleCar) || routePath.IsRestricted(osmscout::vehicleCar))
             {
                 continue;
             }
@@ -124,14 +125,6 @@ void Router::setupGraphFromNodes()
 
 
 }
-void Router::openFile(const Arguments &args)
-{
-    _routeReader.Open(args.dbPath + "router.dat", osmscout::FileScanner::Sequential, true);
-    _routeReader.ReadFileOffset();
-    _nodeCount = _routeReader.ReadUInt32();
-    _routeReader.ReadUInt32();
-    _nodeList.reserve(_nodeCount);
-}
 
 void Router::generateDensities(double intervalTime)
 {
@@ -151,7 +144,7 @@ void Router::setDatabase(osmscout::DatabaseRef database)
     _database = database;
 }
 
-std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight)
+Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -162,6 +155,8 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex, 
     std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
+
+    unsigned int visitedNodesCounter = 0;
 
     gScore[startNodeIndex] = 0;
     priorityQueue.push({startNodeIndex, 0});
@@ -190,7 +185,7 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex, 
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore + h;
-                _graph[neighborIndex].isVisited = true;
+                visitedNodesCounter++;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -226,13 +221,13 @@ std::vector<int> Router::findPathAStar(int startNodeIndex, int targetNodeIndex, 
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
-    _travelTime = calculateRouteCost(paths, startTime, true);
+    auto travelTime = calculateRouteCost(paths, startTime, true);
+    float execTime = 0;
 
-
-    return route;
+    return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight)
+Route Router::findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -243,6 +238,7 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
     std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
+    unsigned int visitedNodesCounter = 0;
 
     gScore[startNodeIndex] = startTime;
     priorityQueue.push({startNodeIndex, startTime});
@@ -273,7 +269,7 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore + h;
-                _graph[neighborIndex].isVisited = true;
+                visitedNodesCounter++;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -310,13 +306,13 @@ std::vector<int> Router::findPathAStarTime(int startNodeIndex, int targetNodeInd
     std::reverse(paths.begin(), paths.end());
 
     float routeCost = gScore[route.back()];
-    _travelTime = routeCost - startTime;
+    auto travelTime = routeCost - startTime;
+    float execTime = 0;
 
-
-    return route;
+    return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-std::vector<int> Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -327,6 +323,7 @@ std::vector<int> Router::findPathDijkstra(int startNodeIndex, int targetNodeInde
     std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
+    unsigned int visitedNodesCounter = 0;
 
     gScore[startNodeIndex] = 0;
     priorityQueue.push({startNodeIndex, 0});
@@ -353,7 +350,7 @@ std::vector<int> Router::findPathDijkstra(int startNodeIndex, int targetNodeInde
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore;
-                _graph[neighborIndex].isVisited = true;
+                visitedNodesCounter++;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -389,12 +386,14 @@ std::vector<int> Router::findPathDijkstra(int startNodeIndex, int targetNodeInde
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
-    _travelTime = calculateRouteCost(paths, startTime, true);
+    auto travelTime = calculateRouteCost(paths, startTime, true);
 
-    return route;
+    float execTime = 0;
+
+    return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime)
 {
     using NodeCostPair = std::pair<int, double>;
 
@@ -405,6 +404,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
     std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
+    unsigned int visitedNodesCounter = 0;
 
     gScore[startNodeIndex] = startTime;
     priorityQueue.push({startNodeIndex, startTime});
@@ -434,7 +434,7 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore;
-                _graph[neighborIndex].isVisited = true;
+                visitedNodesCounter++;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -471,13 +471,13 @@ std::vector<int> Router::findPathDijkstraTime(int startNodeIndex, int targetNode
     std::reverse(paths.begin(), paths.end());
 
     float routeCost = gScore[route.back()];
-    _travelTime = routeCost - startTime;
+    auto travelTime = routeCost - startTime;
+    float execTime = 0;
 
-
-    return route;
+    return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode planningMode, Algorithm algorithm, bool densityUpdate)
+Route Router::findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode planningMode, Algorithm algorithm, bool densityUpdate)
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
@@ -490,6 +490,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
     std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
+    unsigned int visitedNodesCounter = 0;
 
     switch(planningMode)
     {
@@ -549,7 +550,7 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
             {
                 gScore[neighborIndex] = tentativeGScore;
                 double fScore = tentativeGScore + h;
-                _graph[neighborIndex].isVisited = true;
+                visitedNodesCounter++;
                 priorityQueue.push({neighborIndex, fScore});
                 previous[neighborIndex].first = currentIndex;
                 previous[neighborIndex].second = pathIndex;
@@ -591,26 +592,30 @@ std::vector<int>    Router::findPathUniversal(int startNodeIndex, int targetNode
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
+    float travelTime = 0;
+
     switch(planningMode)
     {
     case PlanningMode::OnlyDistance:
     {
-        _travelTime = calculateRouteCost(paths, startTime, true);
+        travelTime = calculateRouteCost(paths, startTime, true);
         break;
     }
     case PlanningMode::DriverInfluence:
     {
         float routeCost = gScore[route.back()];
-        _travelTime = routeCost - startTime;
+        travelTime = routeCost - startTime;
         break;
     }
     }
 
 
-    return route;
+    float execTime = 0;
+
+    return {route, travelTime, execTime, visitedNodesCounter};
 }
 
-std::vector<int> Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime)
 {
     std::unordered_map<int, double> gScore;         // стоимость
     std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
@@ -667,12 +672,14 @@ std::vector<int> Router::findPathBellmanFord(int startNodeIndex, int targetNodeI
     std::reverse(route.begin(), route.end());
     std::reverse(paths.begin(), paths.end());
 
-    _travelTime = calculateRouteCost(paths, startTime, true);
+    auto travelTime = calculateRouteCost(paths, startTime, true);
 
-    return route;
+    float execTime = 0;
+
+    return {route, travelTime, execTime};
 }
 
-std::vector<int> Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime)
+Route Router::findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime)
 {
     std::unordered_map<int, double> gScore;         // стоимость
     std::unordered_map<int, std::pair<int,int>> previous; // в паре индекс узла, индекс ребра
@@ -734,9 +741,11 @@ std::vector<int> Router::findPathBellmanFordTime(int startNodeIndex, int targetN
     std::reverse(paths.begin(), paths.end());
 
     float routeCost = gScore[route.back()];
-    _travelTime = routeCost - startTime;
+    auto travelTime = routeCost - startTime;
 
-    return route;
+    float execTime = 0;
+
+    return {route, travelTime, execTime};
 }
 
 float Router::trafficDiagrammFunctionTriangular(float p, float vf, short int lanes)

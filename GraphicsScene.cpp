@@ -2,24 +2,21 @@
 
 #include <QGraphicsTextItem>
 #include <QGraphicsItem>
-
-#include <iomanip>
-
 #include <QMessageBox>
 
 #define BRUSH_SIZE 20
 
 void GraphicsScene::setMap(QPixmap *value)
 {
-    pixmapItem_.setPixmap(*value);
-    pixmapItem_.setPos(0, 0);
+    _pixmapItem.setPixmap(*value);
+    _pixmapItem.setPos(0, 0);
     setBackgroundBrush(Qt::white);
-    addItem(&pixmapItem_);
+    addItem(&_pixmapItem);
 }
 
 void GraphicsScene::clearMap() {
-    if (pixmapItem_.scene())
-        QGraphicsScene::removeItem(&pixmapItem_);
+    if (_pixmapItem.scene())
+        QGraphicsScene::removeItem(&_pixmapItem);
 }
 
 void GraphicsScene::paintDots(std::vector<Node>* graph)
@@ -31,7 +28,7 @@ void GraphicsScene::paintDots(std::vector<Node>* graph)
         color = QColor(0, 0, 204, 200);
 
         osmscout::Vertex2D dataFirstDot;
-        projection_->GeoToPixel(node.point.GetCoord(), dataFirstDot);
+        _projection->GeoToPixel(node.point.GetCoord(), dataFirstDot);
         addEllipse(dataFirstDot.GetX() - BRUSH_SIZE / 4, dataFirstDot.GetY() - 5,
                    BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
     }
@@ -50,7 +47,7 @@ void GraphicsScene::paintPath(std::vector<Node>* graph, const std::vector<int>& 
         color = QColor(204, 0, 0, 200);
 
         osmscout::Vertex2D dataFirstDot;
-        projection_->GeoToPixel((*graph)[i].point.GetCoord(), dataFirstDot);
+        _projection->GeoToPixel((*graph)[i].point.GetCoord(), dataFirstDot);
         addEllipse(dataFirstDot.GetX() - BRUSH_SIZE / 4, dataFirstDot.GetY() - 5,
                    BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
         QPen pen(QColor(255,0,0));
@@ -80,9 +77,9 @@ void GraphicsScene::paintAllPathIndexes(std::vector<Node>* graph, std::vector<Pa
     for (const auto& path : *pathList)
     {
         osmscout::Vertex2D dataFirstDot;
-        projection_->GeoToPixel((*graph)[path.startNodeIndex].point.GetCoord(), dataFirstDot);
+        _projection->GeoToPixel((*graph)[path.startNodeIndex].point.GetCoord(), dataFirstDot);
         osmscout::Vertex2D dataSecondDot;
-        projection_->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
+        _projection->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
         osmscout::Vertex2D dataResultDot((dataFirstDot.GetX()+dataSecondDot.GetX())/2,
                                          (dataFirstDot.GetY()+dataSecondDot.GetY())/2);
         //addText("Text")
@@ -103,7 +100,7 @@ void GraphicsScene::paintAllNodeIndexes(std::vector<Node>* graph)
     for (const auto& node : *graph)
     {
         osmscout::Vertex2D dataFirstDot;
-        projection_->GeoToPixel(node.point.GetCoord(), dataFirstDot);
+        _projection->GeoToPixel(node.point.GetCoord(), dataFirstDot);
         QGraphicsTextItem *text = addText(QString::number(i));
         text->setDefaultTextColor(QColor(255,0,0));
         text->setPos(dataFirstDot.GetX(), dataFirstDot.GetY()- 5 + BRUSH_SIZE / 4);
@@ -122,7 +119,7 @@ void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Pa
         //color = QColor(204, 0, 0, 200);
 
         osmscout::Vertex2D dataFirstDot;
-        projection_->GeoToPixel((*graph)[path.startNodeIndex].point.GetCoord(), dataFirstDot);
+        _projection->GeoToPixel((*graph)[path.startNodeIndex].point.GetCoord(), dataFirstDot);
 
         // addEllipse(dataFirstDot.GetX() - BRUSH_SIZE / 4, dataFirstDot.GetY() - 5,
         //            BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
@@ -130,7 +127,7 @@ void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Pa
 
 
         osmscout::Vertex2D dataSecondDot;
-        projection_->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
+        _projection->GeoToPixel((*graph)[path.targetNodeIndex].point.GetCoord(), dataSecondDot);
         osmscout::Vertex2D dataResultDot((dataFirstDot.GetX()+dataSecondDot.GetX())/2,
                                          (dataFirstDot.GetY()+dataSecondDot.GetY())/2);
 
@@ -151,7 +148,7 @@ void GraphicsScene::paintCurrentTraffic(std::vector<Node>* graph, std::vector<Pa
                        BRUSH_SIZE / 2, BRUSH_SIZE / 2, QPen(Qt::NoPen), QBrush(color));
             if (mode == PlanningMode::OnlyDistance)
             {
-                QMessageBox::warning(view_, "Warning", "Density >= 120");
+                QMessageBox::warning(_graphicsView, "Warning", "Density >= 120");
             }
         }
         else

@@ -28,20 +28,6 @@ public:
         return _pathList;
     }
 
-    double getTravelTime()
-    {
-        auto value = _travelTime;
-        _travelTime = 0;
-        return value;
-    }
-
-    bool getCongestion()
-    {
-        bool value= _congestion;
-        _congestion = false;
-        return value;
-    }
-
     void setIntervalTime(float time)
     {
         _intervalTime = time;
@@ -50,25 +36,21 @@ public:
     void                loadDataNodes(const Arguments &args, const osmscout::Distance &maxRange,
                             osmscout::GeoCoord coord);
     void                setupGraphFromNodes();
-    void                openFile(const Arguments &args);
     void                generateDensities(double intervalTime);
     void                setMode(PlanningMode);
     void                setDatabase(osmscout::DatabaseRef database);
 
-    std::vector<int>    findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight);
-    std::vector<int>    findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight);
-    std::vector<int>    findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime);
-    std::vector<int>    findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime);
-    std::vector<int>    findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm, bool densityUpdate);
-    std::vector<int>    findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime);
-    std::vector<int>    findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime);
+    Route               findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight);
+    Route               findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight);
+    Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime);
+    Route               findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime);
+    Route               findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, PlanningMode mode, Algorithm algorithm, bool densityUpdate);
+    Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime);
+    Route               findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime);
 
     float               trafficDiagrammFunctionTriangular(float density, float vf, short int lanes);
 
     float               calculateRouteCost(const std::vector<int>& route, int startTime, bool densityUpdate);
-
-    //std::vector<Path>                   pathListConst;
-
 
 
 signals:
@@ -77,17 +59,14 @@ signals:
 private:
     std::vector<osmscout::RouteNode>    _nodeList;
     osmscout::FileScanner               _routeReader;
-    osmscout::Vehicle                   _vehicle = osmscout::vehicleCar;
     std::vector<Node>                   _graph;
     std::vector<Path>                   _pathList;
     uint32_t                            _nodeCount;
-    //const double                        MIN_PATH_LENGTH = 100;
-    double                              _travelTime = 0;
     bool                                _congestion = false;
     osmscout::DatabaseRef               _database;
 
     const int                           TIME_RANGE = 86400;  // 24 часа в секундах
-    const int                           DENSITY_LIMIT = 120;
+    const int                           DENSITY_LIMIT = 125;
     float                               _intervalTime = 30;
 
 };

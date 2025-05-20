@@ -11,7 +11,7 @@
 #include <QTextEdit>
 
 
-#include "DrawMap.h"
+#include "Map.h"
 #include "GraphicsScene.h"
 #include "Router.h"
 #include "CustomStructures.h"
@@ -25,7 +25,7 @@ public:
     MainWindow(int argc, char *argv[], double screen, QWidget *parent = nullptr);
     ~MainWindow();
 
-    void    setData();
+    void    setMap();
     void    initGraph();
     void    initDensities();
     bool    eventFilter(QObject *object, QEvent *e);
@@ -33,20 +33,19 @@ public:
     Route   findPath(int startNodeIndex, int endNodeIndex, int startTime, bool densityUpdate);
     void    moveMap(osmscout::GeoCoord coord);
     void    paintMap();
-    void    runSimulation(unsigned int numOfCars);
+    void    addRoutes(unsigned int numOfCars);
 
 private:
     Router*             _router;
     QGraphicsView*      _graphicsView;
     GraphicsScene*      _scene;
-    DrawMap             _mapData;
+    Map                 _map;
     Arguments           _args;
     QPainter*           _painter;
     QPixmap*            _pixmap;
     std::vector<Node>*  _graphRef;
     std::vector<Path>*  _pathListRef;
     double              _zoom = 1;
-    Options             _options;
     std::vector<int>    _lastRoute;
 
     QCheckBox*          _showTrafficCheckBox;
@@ -63,6 +62,5 @@ private:
 
     unsigned int    _modelingTime = 0;  // в секундах
     unsigned int    _intervalTime = 30;
-    double          _momentTime = _modelingTime;
 };
 #endif // MAINWINDOW_H

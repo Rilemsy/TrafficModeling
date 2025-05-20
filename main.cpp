@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     MainWindow w(argc, argv,
                  QGuiApplication::primaryScreen()->physicalDotsPerInch());;
     w.setWindowState(Qt::WindowMaximized);
-    w.setData();
+    w.setMap();
     w.initGraph();
     w.show();
     return a.exec();

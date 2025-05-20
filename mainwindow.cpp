@@ -30,7 +30,7 @@
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     : QMainWindow(parent),
-    _mapData("QMap", argc, argv, screen)
+    _map("QMap", argc, argv, screen)
 {
     _router = new Router();
     QFile file("output.csv");
@@ -70,12 +70,11 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     _weightLineEdit = new QLineEdit(QString::number(1),this);
     QPushButton* resetButton = new QPushButton("Вернуть дороги с исходному состоянию",this);
 
-
     QGroupBox* optionsGroupBox = new QGroupBox(this);
-    _showTrafficCheckBox = new QCheckBox("Показать трафик",this);
-    _showLastRouteCheckBox = new QCheckBox("Показать последний маршрут",this);
-    _showNodesCheckBox = new QCheckBox("Показать узлы",this);
-    _showNodesIndexCheckBox = new QCheckBox("Показать номера узлов",this);
+    _showTrafficCheckBox = new QCheckBox("Отображение нагруженности дорог",this);
+    _showLastRouteCheckBox = new QCheckBox("Отображение последнего маршрута",this);
+    _showNodesCheckBox = new QCheckBox("Отображение узлов",this);
+    _showNodesIndexCheckBox = new QCheckBox("Отображение номеров узлов",this);
     QVBoxLayout* optionsLayout = new QVBoxLayout;
     optionsLayout->addWidget(_showTrafficCheckBox);
     optionsLayout->addWidget(_showLastRouteCheckBox);
@@ -90,7 +89,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QPushButton* runButton = new QPushButton("Запустить",this);
     connect(runButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
         {
-            runSimulation(numOfCarsSpinBox->value());
+            addRoutes(numOfCarsSpinBox->value());
         });
 
     QLabel* resultLabel = new QLabel("Результат:",this);
@@ -150,10 +149,10 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     auto size = _graphicsView->size();
 
-    _mapData.openDatabase();
-    _args = _mapData.GetArguments();
-    _router->setDatabase(_mapData.database);
-    _scene->setProjection(&_mapData.projection);
+    _map.openDatabase();
+    _args = _map.GetArguments();
+    _router->setDatabase(_map.database);
+    _scene->setProjection(&_map.projection);
     _pixmap = new QPixmap(static_cast<int>(_args.width),
                           static_cast<int>(_args.height));
     _painter = new QPainter(_pixmap);
@@ -220,6 +219,11 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         paintMap();
     });
 
+    connect(_showNodesIndexCheckBox, &QCheckBox::stateChanged, [this]
+    {
+        paintMap();
+    });
+
 
     // connect(_weightTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
     // {
@@ -233,15 +237,13 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
 }
 
-void MainWindow::setData()
+void MainWindow::setMap()
 {
-    osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
-    osmscout::TypeInfoRef buildingType =
-        _mapData.database->GetTypeConfig()->GetTypeInfo("building");
+    osmscout::MapPainterQt mapPainter(_map.styleConfig);
     _pixmap->fill(Qt::white);
-    _mapData.loadData();
-    if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
-                           _mapData.data, _painter))
+    _map.loadData();
+    if (mapPainter.DrawMap(_map.projection, _map.drawParameter,
+                           _map.data, _painter))
     {
         _scene->setMap(_pixmap);
     }
@@ -249,21 +251,22 @@ void MainWindow::setData()
 
 void MainWindow::initGraph()
 {
-    osmscout::Distance dist(osmscout::Distance::Of<osmscout::Meter>(_args.radious));
-    _router->loadDataNodes(_args, dist, _args.center);
-    _router->setupGraphFromNodes();
+    osmscout::Distance dist(osmscout::Distance::Of<osmscout::Meter>(_args.radius));
+    _router->loadNodesData(_args, dist, _args.center);
+    _router->buildGraph();
 
     //auto& graph = router_->getGraph();
     _graphRef = &_router->getGraph();
     _pathListRef = &_router->getPathList();
     _scene->setGraph(_graphRef);
     _scene->setPathList(_pathListRef);
-    _router->generateDensities(_intervalTime);
+    _router->initDensities(_intervalTime);
     _router->setIntervalTime(_intervalTime);
 
     QIntValidator* nodeValidator = new QIntValidator(0, _graphRef->size()-1, this);
     _startNodeLineEdit->setValidator(nodeValidator);
     _targetNodeLineEdit->setValidator(nodeValidator);
+
 
     //_scene->paintDots(_graphRef);
 
@@ -287,7 +290,7 @@ void MainWindow::changeMapZoom(double zoomFactor)
     _scene->clearMap();
     _scene->clear();
     _args.zoom.SetMagnification(_args.zoom.GetMagnification() * zoomFactor);
-    _mapData.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
+    _map.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
                             _args.dpi, _args.width, _args.height);
     delete _painter;
     delete _pixmap;
@@ -295,19 +298,19 @@ void MainWindow::changeMapZoom(double zoomFactor)
                           static_cast<int>(_args.height));
     _pixmap->fill(Qt::white);
     _painter = new QPainter(_pixmap);
-    osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
-    _mapData.loadData();
-    if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
-                           _mapData.data, _painter))
+    osmscout::MapPainterQt mapPainter(_map.styleConfig);
+    _map.loadData();
+    if (mapPainter.DrawMap(_map.projection, _map.drawParameter,
+                           _map.data, _painter))
     {
         _scene->setMap(_pixmap);
     }
     //paintMap();
 
-    if (_showNodesCheckBox->isChecked())
-        _scene->paintDots();
     if (_showTrafficCheckBox->isChecked())
         _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
+    if (_showNodesCheckBox->isChecked())
+        _scene->paintNodes();
     if (_showLastRouteCheckBox->isChecked())
         _scene->paintPath(_lastRoute);
     if (_showNodesIndexCheckBox->isChecked())
@@ -320,7 +323,7 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
     _scene->clearMap();
     _scene->clear();
     _args.center = coord;
-    _mapData.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
+    _map.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
                             _args.dpi, _args.width, _args.height);
     delete _painter;
     delete _pixmap;
@@ -328,19 +331,19 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
                           static_cast<int>(_args.height));
     _pixmap->fill(Qt::white);
     _painter = new QPainter(_pixmap);
-    osmscout::MapPainterQt mapPainter(_mapData.styleConfig);
-    _mapData.loadData();
-    if (mapPainter.DrawMap(_mapData.projection, _mapData.drawParameter,
-                           _mapData.data, _painter))
+    osmscout::MapPainterQt mapPainter(_map.styleConfig);
+    _map.loadData();
+    if (mapPainter.DrawMap(_map.projection, _map.drawParameter,
+                           _map.data, _painter))
     {
         _scene->setMap(_pixmap);
     }
     //paintMap();
 
-    if (_showNodesCheckBox->isChecked())
-        _scene->paintDots();
     if (_showTrafficCheckBox->isChecked())
         _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
+    if (_showNodesCheckBox->isChecked())
+        _scene->paintNodes();
     if (_showLastRouteCheckBox->isChecked())
         _scene->paintPath(_lastRoute);
     if (_showNodesIndexCheckBox->isChecked())
@@ -437,9 +440,15 @@ Route MainWindow::findPath(int startNodeIndex, int endNodeIndex, int startTime, 
     return route;
 }
 
-void MainWindow::runSimulation(unsigned int numOfCars)
+void MainWindow::addRoutes(unsigned int numOfCars)
 {
-    QRandomGenerator random(1234);
+    struct RouteStats
+    {
+        float cost = 0;
+        double execTime = 0;
+        int visitedNodeCount = 0;
+    };
+
     int graphSize = _graphRef->size();
     std::vector<int> path;
     std::vector<double> travelTimes;
@@ -464,44 +473,67 @@ void MainWindow::runSimulation(unsigned int numOfCars)
         out.setDevice(&file);
     }
 
+    std::vector<RouteStats> avgRoutes(numOfCars);
+
     _router->setIntervalTime(_intervalTime);
-    _router->generateDensities(_intervalTime);
+    _router->initDensities(_intervalTime);
 
     unsigned int i = 0;
     int routeStartTime = 0;
     bool densityUpdate = _updateDensitiesCheckBox->isChecked();
 
-    while (i < numOfCars)
-    {// 398,543
-        int startNode = random.bounded(0,graphSize);
-        int targetNode = random.bounded(0,graphSize);
-        while (startNode == targetNode)
-        {
-            startNode = random.bounded(0,graphSize);
-            targetNode = random.bounded(0,graphSize);
+    int s =0;
+    while (s<1)
+    {
+        i = 0;
+        QRandomGenerator random(1234+s);
+        //_router->generateDensities(_intervalTime);
+        while (i < numOfCars)
+        {// 398,543
+            int startNode = random.bounded(0,graphSize);
+            int targetNode = random.bounded(0,graphSize);
+            while (startNode == targetNode)
+            {
+                startNode = random.bounded(0,graphSize);
+                targetNode = random.bounded(0,graphSize);
+            }
+
+            auto route = findPath(startNode,targetNode,routeStartTime, densityUpdate);
+            //auto route = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime,weightType,Algorithm::AStar, densityUpdate);
+            //std::cout << startNode << std::endl;
+            path = route.constructedRoute;
+            if (!path.empty())
+            {
+                routes.push_back(route.constructedRoute);
+                // for (auto route : routes)
+                // {
+
+                // }
+                travelTimes.push_back(route.cost);
+
+                out << i+1 << "," << route.cost << "," << route.execTime << "," << route.visitedNodeCount << "\n";
+
+                routeStartTime += 2;
+
+                // avgRoutes[i].cost += (route.cost - avgRoutes[i].cost) / (s + 1);
+                // avgRoutes[i].execTime += (route.execTime - avgRoutes[i].execTime) / (s + 1);
+                // avgRoutes[i].visitedNodeCount += (int(route.visitedNodeCount) - avgRoutes[i].visitedNodeCount) / (s + 1);
+                i++;
+            }
         }
-
-        auto route = findPath(startNode,targetNode,routeStartTime, densityUpdate);
-        //auto route = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime,weightType,Algorithm::AStar, densityUpdate);
-        //std::cout << startNode << std::endl;
-        path = route.constructedRoute;
-        if (!path.empty())
-        {
-            routes.push_back(route.constructedRoute);
-            // for (auto route : routes)
-            // {
-
-            // }
-            travelTimes.push_back(route.cost);
-
-            out << i+1 << "," << route.cost << "\n";
-
-            routeStartTime += 0;
-            i++;
-        }
+        s++;
     }
-    double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
+
+    // i = 0;
+    // for (const auto& routeInfo : avgRoutes)
+    // {
+    //     out << i+1 << "," << routeInfo.cost << "," << routeInfo.execTime << "," << routeInfo.visitedNodeCount << "\n";
+    //     i++;
+    // }
+
+    //double avgTravelTimeDefault = std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size();
     QMessageBox::information(this, "Информация","Моделирование завершено.");
+    //int temp = 0;
 }
 
 MainWindow::~MainWindow()

@@ -1,5 +1,5 @@
-#ifndef DRAWMAP_H
-#define DRAWMAP_H
+#ifndef MAP_H
+#define MAP_H
 
 #include <osmscout/db/Database.h>
 #include <osmscout/db/BasemapDatabase.h>
@@ -13,53 +13,49 @@
 #include <iostream>
 
 struct Arguments {
-    bool       debug=false;
-    double     dpi=96.0;
-    osmscout::Bearing angle;
-    bool renderContourLines=true;
-    bool renderHillShading=false;
-    std::string dbPath;
-    std::string stylePath;
+    bool                debug=false;
+    double              dpi=96.0;
+    osmscout::Bearing   angle;
+    bool                renderContourLines=false;
+    bool                renderHillShading=false;
+    std::string         dbPath;
+    std::string         stylePath;
 
-    std::string output;
-
-    size_t      width=1920;
-    size_t      height=1080;
-
-    std::string basemap;
-    std::string srtmDirectory;
+    size_t              width=1920;
+    size_t              height=1080;
 
     osmscout::GeoCoord       center;
-    osmscout::Magnification  zoom{osmscout::Magnification::magClose};
+    osmscout::Magnification  zoom   {osmscout::Magnification::magClose};
     osmscout::MapParameter::IconMode iconMode{osmscout::MapParameter::IconMode::FixedSizePixmap};
-    std::list<std::string> iconPaths;
-    double      radious=1000.0;
+    std::list<std::string>          iconPaths;
+    double              radius=1000.0;
 
-    double fontSize{3.0};
-    std::string fontName = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
+    double              fontSize{3.0};
+    std::string fontName;
 };
 
-enum DrawMapArgParserWindowStyle
+enum MapArgParserWindowStyle
 {
     ARG_WS_CONSOLE,
     ARG_WS_WINDOW
 };
 
-class DrawMapArgumentParser: public osmscout::CmdLineParser
+class MapArgumentParser: public osmscout::CmdLineParser
 {
 private:
     Arguments args;
 
 public:
-    DrawMapArgumentParser(const std::string& appName,
+    MapArgumentParser(const std::string& appName,
                      int argc, char* argv[],
                      double dpi,
-                     DrawMapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
+                     MapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
         : osmscout::CmdLineParser(appName, argc, argv)
     {
         args.dpi = dpi;
         args.debug = false;
         args.fontSize = 3.0;
+        args.fontName = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
         AddOption(osmscout::CmdLineDoubleOption([this](const double &value)
                             { args.angle = osmscout::Bearing::Degrees(value); }),
                             "angle", "Rendering angle (in degrees)", false);
@@ -99,34 +95,31 @@ public:
                                                     { args.zoom.SetMagnification(value); }),
                       "zoom", "Rendering zoom");
         AddPositional(osmscout::CmdLineDoubleOption([this](const double &value)
-                                                    { args.radious = value; }),
+                                                    { args.radius = value; }),
                       "radious", "Network radious");
     }
     Arguments GetArguments() const { return args; }
 };
 
-class DrawMap
+class Map
 {
 public:
-    DrawMapArgumentParser argParser;
 
-    osmscout::DatabaseParameter databaseParameter;
-    osmscout::DatabaseRef       database;
-    osmscout::MapServiceRef     mapService;
-    osmscout::StyleConfigRef    styleConfig;
+    osmscout::DatabaseRef           database;
+    osmscout::StyleConfigRef        styleConfig;
+    osmscout::MercatorProjection    projection;
+    osmscout::MapParameter          drawParameter;
+    osmscout::MapData               data;
+    osmscout::MapServiceRef         mapService;
 
-    osmscout::BasemapDatabaseRef basemapDatabase;
+    MapArgumentParser argParser;
 
-    osmscout::MercatorProjection  projection;
-    osmscout::MapParameter        drawParameter;
-    osmscout::AreaSearchParameter searchParameter;
-    osmscout::MapData             data;
 
 public:
-    DrawMap(const std::string& appName,
+    Map(const std::string& appName,
                 int argc, char* argv[],
                 double dpi=96.0,
-                DrawMapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
+                MapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
         : argParser(appName, argc, argv, dpi, windowStyle)
     {
 
@@ -148,6 +141,7 @@ public:
         // if (!args.srtmDirectory.empty()) {
         //     databaseParameter.SetSRTMDirectory(args.srtmDirectory);
         // }
+        osmscout::DatabaseParameter databaseParameter;
 
         database=std::make_shared<osmscout::Database>(databaseParameter);
 
@@ -193,13 +187,13 @@ public:
                        args.width,
                        args.height);
 
-        if (!args.basemap.empty()) {
-            basemapDatabase=std::make_shared<osmscout::BasemapDatabase>(osmscout::BasemapDatabaseParameter{});
-            if (!basemapDatabase->Open(args.basemap)){
-                std::cerr << "Cannot open base map" << std::endl;
-                return false;
-            }
-        }
+        // if (!args.basemap.empty()) {
+        //     basemapDatabase=std::make_shared<osmscout::BasemapDatabase>(osmscout::BasemapDatabaseParameter{});
+        //     if (!basemapDatabase->Open(args.basemap)){
+        //         std::cerr << "Cannot open base map" << std::endl;
+        //         return false;
+        //     }
+        // }
 
         return true;
     }
@@ -215,6 +209,8 @@ public:
 
         data.ClearDBData();
 
+        osmscout::AreaSearchParameter searchParameter;
+
         mapService->LookupTiles(projection,tiles);
         mapService->LoadMissingTileData(searchParameter,*styleConfig,tiles);
         mapService->AddTileDataToMapData(tiles,data);
@@ -227,32 +223,10 @@ public:
         //loadBaseMapTiles(data.baseMapTiles);
     }
 
-    bool loadBaseMapTiles(std::list<osmscout::GroundTile> &tiles)
-    {
-        if (!basemapDatabase) {
-            return true;
-        }
-
-        osmscout::WaterIndexRef waterIndex = basemapDatabase->GetWaterIndex();
-        if (!waterIndex) {
-            return true;
-        }
-
-        osmscout::GeoBox boundingBox(projection.GetDimensions());
-        if (!waterIndex->GetRegions(boundingBox,
-                                    projection.GetMagnification(),
-                                    tiles)) {
-            std::cerr << "Failed to read base map tiles" << std::endl;
-            return false;
-        }
-
-        return true;
-    }
-
     Arguments GetArguments() const
     {
         return argParser.GetArguments();
     }
 };
 
-#endif // DRAWMAP_H
+#endif // MAP_H

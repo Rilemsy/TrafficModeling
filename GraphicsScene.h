@@ -42,7 +42,7 @@ public:
     }
 
 
-    void    paintDots();
+    void    paintNodes();
     void    paintPath(const std::vector<int>&);
     void    paintAllPathIndexes();
     void    paintAllNodeIndexes();
@@ -51,8 +51,6 @@ public:
     osmscout::MercatorProjection*   _projection;
 
 private:
-    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-
     QGraphicsPixmapItem             _pixmapItem;
     QGraphicsView*                  _graphicsView;
     std::vector<Node>*              _graphRef;

@@ -17,7 +17,7 @@ void GraphicsScene::clearMap() {
         QGraphicsScene::removeItem(&_pixmapItem);
 }
 
-void GraphicsScene::paintDots()
+void GraphicsScene::paintNodes()
 {
     for (const auto& node : *_graphRef)
     {
@@ -65,8 +65,6 @@ void GraphicsScene::paintPath(const std::vector<int>& indexes)
 
 
     }
-
-    std::cout << "\nPath Length: " << pathLength << std::endl;
 }
 
 void GraphicsScene::paintAllPathIndexes()
@@ -100,7 +98,7 @@ void GraphicsScene::paintAllNodeIndexes()
         osmscout::Vertex2D dot;
         _projection->GeoToPixel(node.point.GetCoord(), dot);
         QGraphicsTextItem *text = addText(QString::number(i));
-        text->setDefaultTextColor(QColor(255,0,0));
+        text->setDefaultTextColor(QColor(0,0,0));
         text->setPos(dot.GetX(), dot.GetY()- 5 + _dotSize / 4);
         i++;
     }
@@ -108,8 +106,6 @@ void GraphicsScene::paintAllNodeIndexes()
 
 void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
 {
-    QPair<qreal , qreal > prevNodePixels;
-
     for (const auto& path : *_pathListRef)
     {
         QColor color;
@@ -139,17 +135,3 @@ void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
                 secondDot.GetX() - _dotSize / 4 + _dotSize / 4, secondDot.GetY() - 5 + _dotSize / 4, pen);
     }
 }
-
-void GraphicsScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
-{
-    if (event->buttons() & Qt::LeftButton)
-    {
-        osmscout::GeoCoord data;
-        _projection->PixelToGeo(event->scenePos().x(), event->scenePos().y(), data);
-        QColor color(0, 0, 255, 200);
-        addEllipse(event->scenePos().x() - _dotSize / 2,
-                   event->scenePos().y() - 15, _dotSize, _dotSize,
-                   QPen(Qt::NoPen), QBrush(color));
-    }
-}
-

@@ -59,7 +59,7 @@ private:
     osmscout::DatabaseRef               _database;
     unsigned int                        _maxspeed = 90;
 
-    const int                           TIME_RANGE = 86400;  // 24 часа в секундах
+    const int                           TIME_RANGE = 43200;  // в секундах
     const int                           DENSITY_LIMIT = 120;
     float                               _intervalTime = 30;
 

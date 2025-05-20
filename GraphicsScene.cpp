@@ -123,7 +123,7 @@ void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
             color = QColor(0,255,0);
         else if (density < 80)
             color = QColor(255,255,0);
-        else if (density < 124)
+        else if (density < 120)
             color = QColor(255,128,0);
         else
             color = QColor(255,0,0);

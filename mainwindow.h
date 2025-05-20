@@ -61,6 +61,6 @@ private:
     QTextEdit*          _resultTextEdit;
 
     unsigned int    _modelingTime = 0;  // в секундах
-    unsigned int    _intervalTime = 30;
+    unsigned int    _intervalTime = 15;
 };
 #endif // MAINWINDOW_H

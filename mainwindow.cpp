@@ -198,6 +198,12 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
             QMessageBox::information(this,"Информация", "Маршрут не найден.");
     });
 
+    connect(resetButton, &QPushButton::clicked, [this]
+    {
+        _router->setIntervalTime(_intervalTime);
+        _router->initDensities(_intervalTime);
+    });
+
     connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
     {
         _intervalTime = timeIntervalLineEdit->text().toInt();
@@ -481,6 +487,7 @@ void MainWindow::addRoutes(unsigned int numOfCars)
     unsigned int i = 0;
     int routeStartTime = 0;
     bool densityUpdate = _updateDensitiesCheckBox->isChecked();
+    int carBatch = 100;
 
     int s =0;
     while (s<1)
@@ -513,12 +520,14 @@ void MainWindow::addRoutes(unsigned int numOfCars)
 
                 out << i+1 << "," << route.cost << "," << route.execTime << "," << route.visitedNodeCount << "\n";
 
-                routeStartTime += 2;
+                if (i % carBatch == 0)
+                    routeStartTime += 5;
 
                 // avgRoutes[i].cost += (route.cost - avgRoutes[i].cost) / (s + 1);
                 // avgRoutes[i].execTime += (route.execTime - avgRoutes[i].execTime) / (s + 1);
                 // avgRoutes[i].visitedNodeCount += (int(route.visitedNodeCount) - avgRoutes[i].visitedNodeCount) / (s + 1);
                 i++;
+                //std::cout << "Start: " << startNode << " Target: " << targetNode << std::endl;
             }
         }
         s++;

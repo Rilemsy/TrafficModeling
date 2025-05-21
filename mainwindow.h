@@ -27,10 +27,8 @@ public:
 
     void    setMap();
     void    initGraph();
-    void    initDensities();
     bool    eventFilter(QObject *object, QEvent *e);
     void    changeMapZoom(double zoomFactor);
-    Route   findPath(int startNodeIndex, int endNodeIndex, int startTime, bool densityUpdate);
     void    moveMap(osmscout::GeoCoord coord);
     void    paintMap();
     void    addRoutes(unsigned int numOfCars);
@@ -43,7 +41,7 @@ private:
     Arguments           _args;
     QPainter*           _painter;
     QPixmap*            _pixmap;
-    std::vector<Node>*  _graphRef;
+    std::vector<Node>*  _nodeListRef;
     std::vector<Path>*  _pathListRef;
     double              _zoom = 1;
     std::vector<int>    _lastRoute;
@@ -53,12 +51,12 @@ private:
     QCheckBox*          _showNodesCheckBox;
     QCheckBox*          _showNodesIndexCheckBox;
     QCheckBox*          _updateDensitiesCheckBox;
-    QComboBox*          _weightTypeComboBox;
     QComboBox*          _algorithmComboBox;
     QLineEdit*          _weightLineEdit;
     QLineEdit*          _startNodeLineEdit;
     QLineEdit*          _targetNodeLineEdit;
     QTextEdit*          _resultTextEdit;
+    QCheckBox*          _loadCheckBox;
 
     unsigned int    _modelingTime = 0;  // в секундах
     unsigned int    _intervalTime = 15;

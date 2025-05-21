@@ -18,9 +18,9 @@ class Router : public QObject
 public:
     Router();
 
-    std::vector<Node>&  getGraph()
+    std::vector<Node>&  getNodeList()
     {
-        return _graph;
+        return _nodeList;
     }
 
     std::vector<Path>&  getPathList()
@@ -39,21 +39,19 @@ public:
     void                initDensities(double intervalTime);
     void                setDatabase(osmscout::DatabaseRef database);
 
-    Route               findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool densityUpdate);
-    Route               findPathAStarTime(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool densityUpdate);
-    Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate);
-    Route               findPathDijkstraTime(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate);
-    Route               findPathUniversal(int startNodeIndex, int targetNodeIndex, int startTime, int intervalTime, WeightType mode, Algorithm algorithm, bool densityUpdate);
-    Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate);
-    Route               findPathBellmanFordTime(int startNodeIndex, int targetNodeIndex, int startTime, bool densityUpdate);
+    Route               findPath(int startNodeIndex, int endNodeIndex, int startTime, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm);
+    Route               findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool withLoad, bool densityUpdate);
+    Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime, bool withLoad, bool densityUpdate);
+    Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, bool withLoad, bool densityUpdate);
 
+    void                addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm);
     float               trafficDiagramFunction(float density, float vf);
     float               calculateRouteCost(const std::vector<int>& route, int startTime, bool densityUpdate);
 
 private:
     std::vector<osmscout::RouteNode>    _routeNodeList;
 
-    std::vector<Node>                   _graph;
+    std::vector<Node>                   _nodeList;
     std::vector<Path>                   _pathList;
     uint32_t                            _nodeCount;
     osmscout::DatabaseRef               _database;

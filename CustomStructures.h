@@ -25,15 +25,9 @@ struct Node
 struct Route
 {
     std::vector<int> constructedRoute;
-    float cost = 0;
+    float travelTime = 0;
     double execTime = 0;
     unsigned int visitedNodeCount = 0;
-};
-
-enum class WeightType
-{
-    Distance = 0,
-    Time
 };
 
 enum class Algorithm

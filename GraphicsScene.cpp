@@ -19,7 +19,7 @@ void GraphicsScene::clearMap() {
 
 void GraphicsScene::paintNodes()
 {
-    for (const auto& node : *_graphRef)
+    for (const auto& node : *_nodeListRef)
     {
         QColor color;
 
@@ -45,7 +45,7 @@ void GraphicsScene::paintPath(const std::vector<int>& indexes)
         color = QColor(204, 0, 0, 200);
 
         osmscout::Vertex2D dot;
-        _projection->GeoToPixel((*_graphRef)[i].point.GetCoord(), dot);
+        _projection->GeoToPixel((*_nodeListRef)[i].point.GetCoord(), dot);
         addEllipse(dot.GetX() - _dotSize / 4, dot.GetY() - 5,
                    _dotSize / 2, _dotSize / 2, QPen(Qt::NoPen), QBrush(color));
         QPen pen(QColor(255,0,0));
@@ -54,7 +54,7 @@ void GraphicsScene::paintPath(const std::vector<int>& indexes)
         {
             addLine(prevNodePixels.first,prevNodePixels.second,dot.GetX() - _dotSize / 4 + _dotSize / 4,
                     dot.GetY() - 5 + _dotSize / 4, pen);
-            auto currentPathLength = (*_graphRef)[indexes[currentNode]].point.GetCoord().GetDistance((*_graphRef)[indexes[currentNode-1]].point.GetCoord()).AsMeter() / 1000.0;
+            auto currentPathLength = (*_nodeListRef)[indexes[currentNode]].point.GetCoord().GetDistance((*_nodeListRef)[indexes[currentNode-1]].point.GetCoord()).AsMeter() / 1000.0;
             pathLength += currentPathLength;
             //std::cout << "Current pathLength: " << currentPathLength << std::endl;
         }
@@ -73,9 +73,9 @@ void GraphicsScene::paintAllPathIndexes()
     for (const auto& path : *_pathListRef)
     {
         osmscout::Vertex2D firstDot;
-        _projection->GeoToPixel((*_graphRef)[path.startNodeIndex].point.GetCoord(), firstDot);
+        _projection->GeoToPixel((*_nodeListRef)[path.startNodeIndex].point.GetCoord(), firstDot);
         osmscout::Vertex2D secondDot;
-        _projection->GeoToPixel((*_graphRef)[path.targetNodeIndex].point.GetCoord(), secondDot);
+        _projection->GeoToPixel((*_nodeListRef)[path.targetNodeIndex].point.GetCoord(), secondDot);
         osmscout::Vertex2D resultDot((firstDot.GetX()+secondDot.GetX())/2,
                                          (firstDot.GetY()+secondDot.GetY())/2);
         //addText("Text")
@@ -93,7 +93,7 @@ void GraphicsScene::paintAllPathIndexes()
 void GraphicsScene::paintAllNodeIndexes()
 {
     int i = 0;
-    for (const auto& node : *_graphRef)
+    for (const auto& node : *_nodeListRef)
     {
         osmscout::Vertex2D dot;
         _projection->GeoToPixel(node.point.GetCoord(), dot);
@@ -111,10 +111,10 @@ void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
         QColor color;
 
         osmscout::Vertex2D firstDot;
-        _projection->GeoToPixel((*_graphRef)[path.startNodeIndex].point.GetCoord(), firstDot);
+        _projection->GeoToPixel((*_nodeListRef)[path.startNodeIndex].point.GetCoord(), firstDot);
 
         osmscout::Vertex2D secondDot;
-        _projection->GeoToPixel((*_graphRef)[path.targetNodeIndex].point.GetCoord(), secondDot);
+        _projection->GeoToPixel((*_nodeListRef)[path.targetNodeIndex].point.GetCoord(), secondDot);
         osmscout::Vertex2D resultDot((firstDot.GetX()+secondDot.GetX())/2,
                                          (firstDot.GetY()+secondDot.GetY())/2);
 

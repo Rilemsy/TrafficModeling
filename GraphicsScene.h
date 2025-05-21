@@ -32,9 +32,9 @@ public:
     {
         _projection = projection;
     }
-    void    setGraph(std::vector<Node>*  graph)
+    void    setNodeList(std::vector<Node>*  nodeList)
     {
-        _graphRef = graph;
+        _nodeListRef = nodeList;
     }
     void    setPathList(std::vector<Path>*  pathList)
     {
@@ -53,7 +53,7 @@ public:
 private:
     QGraphicsPixmapItem             _pixmapItem;
     QGraphicsView*                  _graphicsView;
-    std::vector<Node>*              _graphRef;
+    std::vector<Node>*              _nodeListRef;
     std::vector<Path>*              _pathListRef;
     short int                       _dotSize = 16;
 

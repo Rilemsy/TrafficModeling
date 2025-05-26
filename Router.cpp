@@ -136,7 +136,7 @@ void Router::setDatabase(osmscout::DatabaseRef database)
 }
 
 
-Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool withLoad, bool densityUpdate)
+Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, float startTime, float weight, bool withLoad, bool densityUpdate)
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
@@ -151,7 +151,7 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTi
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
 
     gScore[startNodeIndex] = startTime;
-    priorityQueue.push({startNodeIndex, startTime});
+    priorityQueue.push({startNodeIndex, 0});
 
     while (!priorityQueue.empty())
     {
@@ -229,11 +229,11 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, int startTi
 
     auto travelTime = calculateRouteCost(paths, startTime, densityUpdate);
 
-    return {route, travelTime, elapsed.count() * 1e-9, visitedCount};
+    return {route, startTime, travelTime, elapsed.count() * 1e-9, visitedCount};
 }
 
 
-Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime, bool withLoad, bool densityUpdate)
+Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate)
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
@@ -327,10 +327,10 @@ Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, int star
 
     auto travelTime = calculateRouteCost(paths, startTime, densityUpdate);
 
-    return {route, travelTime, elapsed.count() * 1e-9, visitedCount};
+    return {route, startTime, travelTime, elapsed.count() * 1e-9, visitedCount};
 }
 
-Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, bool withLoad, bool densityUpdate)
+Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate)
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
@@ -408,27 +408,42 @@ Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int s
 
     auto travelTime = calculateRouteCost(paths, startTime, densityUpdate);
 
-    return {route, travelTime, elapsed.count() * 1e-9, visitedCount};
+    return {route, startTime, travelTime, elapsed.count() * 1e-9, visitedCount};
 }
 
 float Router::trafficDiagramFunction(float p, float vf)
 {
     float pj = 134;
-    float pc = 24;
-    float qc = vf*pc;
 
     if (p > DENSITY_LIMIT)
     {
         p = DENSITY_LIMIT;
     }
 
-    if (p <= pc) // km/h
+    float result = vf * std::log(pj/p);
+
+    if (result > vf) // km/h
         return vf;
     else
-        return qc * ((1 - ((p - pc)/(pj - pc))) / p);
+        return result;
+
+
+    // float pj = 134;
+    // float qc = 2100;
+    // float pc = 2100/vf;
+
+    // if (p > DENSITY_LIMIT)
+    // {
+    //     p = DENSITY_LIMIT;
+    // }
+
+    // if (p <= pc) // km/h
+    //     return vf;
+    // else
+    //     return qc * ((1 - ((p - pc)/(pj - pc))) / p);
 }
 
-Route Router::findPath(int startNodeIndex, int endNodeIndex, int startTime, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm)
+Route Router::findPath(int startNodeIndex, int endNodeIndex, float startTime, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm)
 {
     Route route;
 
@@ -461,7 +476,7 @@ Route Router::findPath(int startNodeIndex, int endNodeIndex, int startTime, floa
     return route;
 }
 
-void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm)
+void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args)
 {
     struct RouteStats
     {
@@ -473,7 +488,7 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
     int graphSize = _nodeList.size();
     std::vector<int> path;
     std::vector<double> travelTimes;
-    std::vector<std::vector<int>> routes;
+    std::vector<Route> routes;
 
     QFile file;
 
@@ -499,7 +514,9 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
 
     unsigned int i = 0;
     int routeStartTime = 0;
-    int carBatch = 100;
+    int carBatch = 30;
+
+    std::unordered_map<int,int> startNodes;
 
     int s =0;
     while (s<1)
@@ -511,30 +528,36 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
         {// 398,543
             int startNode = random.bounded(0,graphSize);
             int targetNode = random.bounded(0,graphSize);
-            while (startNode == targetNode)
+            while (/*startNode == targetNode &&*/ _nodeList[startNode].point.GetCoord().GetDistance(_nodeList[targetNode].point.GetCoord()).AsMeter() < (args.radius*1.8))
             {
                 startNode = random.bounded(0,graphSize);
                 targetNode = random.bounded(0,graphSize);
             }
-
-            auto route = findPath(16,65, weight, routeStartTime, withLoad, densityUpdate, algorithm);
+            auto route = findPath(startNode, targetNode, routeStartTime, weight, withLoad, densityUpdate, algorithm);
             //auto route = _router->findPathUniversal(startNode,targetNode,routeStartTime,_intervalTime,weightType,Algorithm::AStar, densityUpdate);
             //std::cout << startNode << std::endl;
             path = route.constructedRoute;
             if (!path.empty())
             {
-                routes.push_back(route.constructedRoute);
-                // for (auto route : routes)
+                startNodes[startNode] += 1;
+
+                // routes.push_back(route);
+                // travelTimes.clear();
+                // for (auto const& elem : routes)
                 // {
-
+                //     auto travelTime = calculateRouteCost(elem.constructedRoute, elem.startTime, false);
+                //     travelTimes.push_back(travelTime);
                 // }
-                travelTimes.push_back(route.travelTime);
 
-                out << i+1 << "," << route.travelTime << "," << route.execTime << "," << route.visitedNodeCount << "\n";
+                out << i+1 << "," << route.travelTime << "," << route.execTime << "," << route.visitedNodeCount /*<< "," <<
+                    std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size()*/ <<"\n";
 
-                // if (i % carBatch == 0)
-                routeStartTime += 2;
-
+                if (i % carBatch == 0)
+                {
+                    routeStartTime += 2;
+                    //carBatch = random.bounded(10,51);
+                    startNodes.clear();
+                }
                 // avgRoutes[i].cost += (route.cost - avgRoutes[i].cost) / (s + 1);
                 // avgRoutes[i].execTime += (route.execTime - avgRoutes[i].execTime) / (s + 1);
                 // avgRoutes[i].visitedNodeCount += (int(route.visitedNodeCount) - avgRoutes[i].visitedNodeCount) / (s + 1);
@@ -544,6 +567,8 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
         }
         s++;
     }
+
+    file.close();
 
     // i = 0;
     // for (const auto& routeInfo : avgRoutes)
@@ -556,7 +581,7 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
     //int temp = 0;
 }
 
-float Router::calculateRouteCost(const std::vector<int>& paths, int startTime, bool densityUpdate)
+float Router::calculateRouteCost(const std::vector<int>& paths, float startTime, bool densityUpdate)
 {
     float travelTime = 0;
     for (int pathIndex : paths)

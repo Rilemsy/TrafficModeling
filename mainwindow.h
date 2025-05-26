@@ -59,6 +59,6 @@ private:
     QCheckBox*          _loadCheckBox;
 
     unsigned int    _modelingTime = 0;  // в секундах
-    unsigned int    _intervalTime = 15;
+    unsigned int    _intervalTime = 10;
 };
 #endif // MAINWINDOW_H

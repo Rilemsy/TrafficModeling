@@ -119,7 +119,7 @@ void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
                                          (firstDot.GetY()+secondDot.GetY())/2);
 
         float density = path.densities[std::floor(currentTime/intervalTime)];
-        if (density < 40)
+        if (density < 50)
             color = QColor(0,255,0);
         else if (density < 80)
             color = QColor(255,255,0);

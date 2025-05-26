@@ -10,7 +10,7 @@ struct Path
     osmscout::Distance distanceLength;
     unsigned int startNodeIndex;
     unsigned int targetNodeIndex;
-    float maxSpeed = 90;
+    float maxSpeed = 60;
     short int lanes = 1;
     std::vector<float> densities;
 };
@@ -25,6 +25,7 @@ struct Node
 struct Route
 {
     std::vector<int> constructedRoute;
+    float startTime = 0;
     float travelTime = 0;
     double execTime = 0;
     unsigned int visitedNodeCount = 0;

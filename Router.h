@@ -39,14 +39,14 @@ public:
     void                initDensities(double intervalTime);
     void                setDatabase(osmscout::DatabaseRef database);
 
-    Route               findPath(int startNodeIndex, int endNodeIndex, int startTime, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm);
-    Route               findPathAStar(int startNodeIndex, int targetNodeIndex, int startTime, float weight, bool withLoad, bool densityUpdate);
-    Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, int startTime, bool withLoad, bool densityUpdate);
-    Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, int startTime, bool withLoad, bool densityUpdate);
+    Route               findPath(int startNodeIndex, int endNodeIndex, float startTime, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm);
+    Route               findPathAStar(int startNodeIndex, int targetNodeIndex, float startTime, float weight, bool withLoad, bool densityUpdate);
+    Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate);
+    Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate);
 
-    void                addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm);
+    void                addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args);
     float               trafficDiagramFunction(float density, float vf);
-    float               calculateRouteCost(const std::vector<int>& route, int startTime, bool densityUpdate);
+    float               calculateRouteCost(const std::vector<int>& route, float startTime, bool densityUpdate);
 
 private:
     std::vector<osmscout::RouteNode>    _routeNodeList;
@@ -55,11 +55,11 @@ private:
     std::vector<Path>                   _pathList;
     uint32_t                            _nodeCount;
     osmscout::DatabaseRef               _database;
-    unsigned int                        _maxspeed = 90;
+    unsigned int                        _maxspeed = 65;
 
     const int                           TIME_RANGE = 43200;  // в секундах
     const int                           DENSITY_LIMIT = 120;
-    float                               _intervalTime = 30;
+    float                               _intervalTime = 10;
 
 };
 

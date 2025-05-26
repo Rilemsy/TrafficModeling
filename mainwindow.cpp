@@ -161,7 +161,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
             {
                 _router->setIntervalTime(_intervalTime);
                 _router->addRoutes(numOfCarsSpinBox->value(), _weightLineEdit->text().toFloat() , _loadCheckBox->isChecked(),
-                                   _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()));
+                                   _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args);
                 QMessageBox::information(this, "Информация","Выполнение завершено.");
             });
 

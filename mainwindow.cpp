@@ -321,7 +321,7 @@ void MainWindow::changeMapZoom(double zoomFactor)
     if (_showTrafficCheckBox->isChecked())
         _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
     if (_showNodesCheckBox->isChecked())
-        _scene->paintNodes(_router->startNodes);
+        _scene->paintNodes();
     if (_showLastRouteCheckBox->isChecked())
         _scene->paintPath(_lastRoute);
     if (_showNodesIndexCheckBox->isChecked())
@@ -354,7 +354,7 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
     if (_showTrafficCheckBox->isChecked())
         _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
     if (_showNodesCheckBox->isChecked())
-        _scene->paintNodes(_router->startNodes);
+        _scene->paintNodes();
     if (_showLastRouteCheckBox->isChecked())
         _scene->paintPath(_lastRoute);
     if (_showNodesIndexCheckBox->isChecked())

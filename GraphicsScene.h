@@ -42,7 +42,7 @@ public:
     }
 
 
-    void    paintNodes(const std::unordered_map<int,int>& startNodes);
+    void    paintNodes();
     void    paintPath(const std::vector<int>&);
     void    paintAllPathIndexes();
     void    paintAllNodeIndexes();
@@ -55,7 +55,7 @@ private:
     QGraphicsView*                  _graphicsView;
     std::vector<Node>*              _nodeListRef;
     std::vector<Path>*              _pathListRef;
-    short int                       _dotSize = 16;
+    short int                       _dotSize = 8;
 
 };
 

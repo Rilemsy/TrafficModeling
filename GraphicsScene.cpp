@@ -17,19 +17,18 @@ void GraphicsScene::clearMap() {
         QGraphicsScene::removeItem(&_pixmapItem);
 }
 
-void GraphicsScene::paintNodes(const std::unordered_map<int,int>& startNodes)
+void GraphicsScene::paintNodes()
 {
-    for (const auto& node : startNodes)
-    // for (const auto& node : *_nodeListRef)
+    for (const auto& node : *_nodeListRef)
     {
         QColor color;
 
         color = QColor(0, 0, 204, 200);
 
         osmscout::Vertex2D dot;
-        _projection->GeoToPixel((*_nodeListRef)[node.first].point.GetCoord(), dot);
-        addEllipse(dot.GetX() - _dotSize / 4, dot.GetY() - 5,
-                   _dotSize / 2, _dotSize / 2, QPen(Qt::NoPen), QBrush(color));
+        _projection->GeoToPixel(node.point.GetCoord(), dot);
+        addEllipse(dot.GetX() - _dotSize / 2, dot.GetY() - 5,
+                   _dotSize, _dotSize, QPen(Qt::NoPen), QBrush(color));
     }
 }
 
@@ -47,20 +46,20 @@ void GraphicsScene::paintPath(const std::vector<int>& indexes)
 
         osmscout::Vertex2D dot;
         _projection->GeoToPixel((*_nodeListRef)[i].point.GetCoord(), dot);
-        addEllipse(dot.GetX() - _dotSize / 4, dot.GetY() - 5,
-                   _dotSize / 2, _dotSize / 2, QPen(Qt::NoPen), QBrush(color));
+        addEllipse(dot.GetX() - _dotSize / 2, dot.GetY() - 5,
+                   _dotSize, _dotSize, QPen(Qt::NoPen), QBrush(color));
         QPen pen(QColor(255,0,0));
         pen.setWidth(5);
         if (notFirstNodeFlag)
         {
-            addLine(prevNodePixels.first,prevNodePixels.second,dot.GetX() - _dotSize / 4 + _dotSize / 4,
-                    dot.GetY() - 5 + _dotSize / 4, pen);
+            addLine(prevNodePixels.first,prevNodePixels.second,dot.GetX() - _dotSize / 2 + _dotSize / 2,
+                    dot.GetY() - 5 + _dotSize / 2, pen);
             auto currentPathLength = (*_nodeListRef)[indexes[currentNode]].point.GetCoord().GetDistance((*_nodeListRef)[indexes[currentNode-1]].point.GetCoord()).AsMeter() / 1000.0;
             pathLength += currentPathLength;
             //std::cout << "Current pathLength: " << currentPathLength << std::endl;
         }
-        prevNodePixels.first = dot.GetX() - _dotSize / 4 + _dotSize / 4;
-        prevNodePixels.second = dot.GetY() - 5 + _dotSize / 4;
+        prevNodePixels.first = dot.GetX();
+        prevNodePixels.second = dot.GetY() - 5 + _dotSize / 2;
         notFirstNodeFlag = true;
         currentNode++;
 
@@ -83,10 +82,10 @@ void GraphicsScene::paintAllPathIndexes()
         QGraphicsTextItem *text = addText(QString::number(i));
         if (path.startNodeIndex < path.targetNodeIndex)
         {
-            text->setPos(resultDot.GetX() -  35, resultDot.GetY()+ 5 - _dotSize / 4);
+            text->setPos(resultDot.GetX() -  35, resultDot.GetY()+ 5 - _dotSize / 2);
         }
         else
-            text->setPos(resultDot.GetX(), resultDot.GetY()- 5 + _dotSize / 4);
+            text->setPos(resultDot.GetX(), resultDot.GetY()- 5 + _dotSize / 2);
         i++;
     }
 }
@@ -100,7 +99,7 @@ void GraphicsScene::paintAllNodeIndexes()
         _projection->GeoToPixel(node.point.GetCoord(), dot);
         QGraphicsTextItem *text = addText(QString::number(i));
         text->setDefaultTextColor(QColor(0,0,0));
-        text->setPos(dot.GetX(), dot.GetY()- 5 + _dotSize / 4);
+        text->setPos(dot.GetX(), dot.GetY()- 5 + _dotSize / 2);
         i++;
     }
 }
@@ -132,7 +131,7 @@ void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
         QPen pen(color);
         pen.setWidth(3);
 
-        addLine(firstDot.GetX() - _dotSize / 4 + _dotSize / 4, firstDot.GetY() - 5 + _dotSize / 4,
-                secondDot.GetX() - _dotSize / 4 + _dotSize / 4, secondDot.GetY() - 5 + _dotSize / 4, pen);
+        addLine(firstDot.GetX(), firstDot.GetY() - 5 + _dotSize / 2,
+                secondDot.GetX(), secondDot.GetY() - 5 + _dotSize / 2, pen);
     }
 }

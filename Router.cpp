@@ -29,7 +29,7 @@ void Router::loadNodesData(const Arguments &args,
         size_t validPaths = 0;                                              /////////////
         for (const auto &path : node.paths)
         {
-            if (path.IsUsable(osmscout::vehicleCar) && !path.IsRestricted(osmscout::vehicleCar))
+            if (path.IsUsable(osmscout::vehicleCar) && !path.IsRestricted(osmscout::vehicleCar) && path.distance.AsMeter() > 0)
             {
                 ++validPaths;
             }
@@ -63,7 +63,7 @@ void Router::buildGraph()
 
         for (const auto& routePath : routeNode.paths)
         {
-            if (!routePath.IsUsable(osmscout::vehicleCar) || routePath.IsRestricted(osmscout::vehicleCar))
+            if (!routePath.IsUsable(osmscout::vehicleCar) || routePath.IsRestricted(osmscout::vehicleCar) || routePath.distance.AsMeter() <= 0)
             {
                 continue;
             }
@@ -93,14 +93,20 @@ void Router::buildGraph()
                                 const auto *lanes = dynamic_cast<const osmscout::LanesFeatureValue*>(value);
                                 if (lanes!=nullptr)
                                 {
-                                    path.lanes = (short int)lanes->GetLanes();
+                                    short int lanesValue = (short int)lanes->GetLanes();
+                                    if (lanesValue > 0)
+                                        path.lanes = lanesValue;
                                 }
                                 const auto *maxSpeed = dynamic_cast<const osmscout::MaxSpeedFeatureValue*>(value);
                                 if (maxSpeed!=nullptr)
                                 {
-                                    path.maxSpeed = (int)maxSpeed->GetMaxSpeed();
-                                    if (path.maxSpeed > _maxspeed)
-                                        _maxspeed = path.maxSpeed;
+                                    int maxSpeedValue = (int)maxSpeed->GetMaxSpeed();
+                                    if (maxSpeedValue > 0)
+                                    {
+                                        path.maxSpeed = maxSpeedValue;
+                                        if (path.maxSpeed > _maxspeed)
+                                            _maxspeed = path.maxSpeed;
+                                    }
                                 }
                             }
                         }
@@ -172,7 +178,7 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, float start
             if (withLoad)
             {
                 density = path.densities[std::floor(gScore[currentIndex]/_intervalTime)];
-                auto diagramRes = trafficDiagramFunction(density, path.maxSpeed);
+                auto diagramRes = trafficDiagramFunction(density/((path.distanceLength.AsMeter()/1000)*path.lanes), path.maxSpeed);
                 pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
             }
             else
@@ -269,7 +275,7 @@ Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, float st
             if (withLoad)
             {
                 density = path.densities[std::floor((gScore[currentIndex])/_intervalTime)];
-                auto diagramRes = trafficDiagramFunction(density, path.maxSpeed);
+                auto diagramRes = trafficDiagramFunction(density/((path.distanceLength.AsMeter()/1000)*path.lanes), path.maxSpeed);
                 pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
             }
             else
@@ -354,7 +360,7 @@ Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float
             if (withLoad)
             {
                 float density = path.densities[std::floor(gScore[path.startNodeIndex]/_intervalTime)];
-                auto diagramRes = trafficDiagramFunction(density, path.maxSpeed);
+                auto diagramRes = trafficDiagramFunction(density/((path.distanceLength.AsMeter()/1000)*path.lanes), path.maxSpeed);
                 pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
             }
             else
@@ -514,11 +520,10 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
 
     unsigned int i = 0;
     int routeStartTime = 0;
-    int carBatch = 30;
+    int carBatch = 100;
 
-    std::unordered_map<int,int> startNodes;
 
-    int s =0;
+    int s = 0;
     while (s<1)
     {
         i = 0;
@@ -528,7 +533,7 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
         {// 398,543
             int startNode = random.bounded(0,graphSize);
             int targetNode = random.bounded(0,graphSize);
-            while (/*startNode == targetNode &&*/ _nodeList[startNode].point.GetCoord().GetDistance(_nodeList[targetNode].point.GetCoord()).AsMeter() < (args.radius*1.8))
+            while (/*startNode == targetNode &&*/ _nodeList[startNode].point.GetCoord().GetDistance(_nodeList[targetNode].point.GetCoord()).AsMeter() < (args.radius))
             {
                 startNode = random.bounded(0,graphSize);
                 targetNode = random.bounded(0,graphSize);
@@ -539,7 +544,8 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
             path = route.constructedRoute;
             if (!path.empty())
             {
-                startNodes[startNode] += 1;
+                // startNodes[startNode] += 1;
+                // startNodes[targetNode] += 1;
 
                 // routes.push_back(route);
                 // travelTimes.clear();
@@ -554,9 +560,12 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
 
                 if (i % carBatch == 0)
                 {
+
+                    // if (i>10000)
+                    //     carBatch = 30;
                     routeStartTime += 2;
                     //carBatch = random.bounded(10,51);
-                    startNodes.clear();
+                    //startNodes.clear();
                 }
                 // avgRoutes[i].cost += (route.cost - avgRoutes[i].cost) / (s + 1);
                 // avgRoutes[i].execTime += (route.execTime - avgRoutes[i].execTime) / (s + 1);
@@ -588,14 +597,17 @@ float Router::calculateRouteCost(const std::vector<int>& paths, float startTime,
     {
         Path path = _pathList[pathIndex];
         float density = path.densities[std::floor((travelTime+startTime)/_intervalTime)];
-        auto diagramRes = trafficDiagramFunction(density, path.maxSpeed);
+        auto diagramRes = trafficDiagramFunction(density/((path.distanceLength.AsMeter() / 1000.0)*path.lanes), path.maxSpeed);
         float pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
         if (densityUpdate)/*(_pathList[curPathIndex].distanceLength.AsMeter() >= MIN_PATH_LENGTH)*/
         {
-            _pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] += float(1) /
-                ((_pathList[pathIndex].distanceLength.AsMeter()/1000)*_pathList[pathIndex].lanes);
-            if (_pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] > DENSITY_LIMIT)
-                _pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] = DENSITY_LIMIT;
+            _pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] += 1.0;
+
+            if (_pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] /
+                    ((_pathList[pathIndex].distanceLength.AsMeter()/1000)*_pathList[pathIndex].lanes) > DENSITY_LIMIT)
+            {
+                _pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] -= 1.0;
+            }
         }
 
         travelTime += pathCost;

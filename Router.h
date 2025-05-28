@@ -61,6 +61,10 @@ private:
     const int                           DENSITY_LIMIT = 120;
     float                               _intervalTime = 10;
 
+public:
+    std::unordered_map<int,int> startNodes;
+
+
 };
 
 #endif // ROUTER_H

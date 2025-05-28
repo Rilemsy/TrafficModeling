@@ -42,7 +42,7 @@ public:
     }
 
 
-    void    paintNodes();
+    void    paintNodes(const std::unordered_map<int,int>& startNodes);
     void    paintPath(const std::vector<int>&);
     void    paintAllPathIndexes();
     void    paintAllNodeIndexes();

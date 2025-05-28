@@ -17,16 +17,17 @@ void GraphicsScene::clearMap() {
         QGraphicsScene::removeItem(&_pixmapItem);
 }
 
-void GraphicsScene::paintNodes()
+void GraphicsScene::paintNodes(const std::unordered_map<int,int>& startNodes)
 {
-    for (const auto& node : *_nodeListRef)
+    for (const auto& node : startNodes)
+    // for (const auto& node : *_nodeListRef)
     {
         QColor color;
 
         color = QColor(0, 0, 204, 200);
 
         osmscout::Vertex2D dot;
-        _projection->GeoToPixel(node.point.GetCoord(), dot);
+        _projection->GeoToPixel((*_nodeListRef)[node.first].point.GetCoord(), dot);
         addEllipse(dot.GetX() - _dotSize / 4, dot.GetY() - 5,
                    _dotSize / 2, _dotSize / 2, QPen(Qt::NoPen), QBrush(color));
     }
@@ -118,7 +119,7 @@ void GraphicsScene::paintCurrentTraffic(float currentTime, float intervalTime)
         osmscout::Vertex2D resultDot((firstDot.GetX()+secondDot.GetX())/2,
                                          (firstDot.GetY()+secondDot.GetY())/2);
 
-        float density = path.densities[std::floor(currentTime/intervalTime)];
+        float density = path.densities[std::floor(currentTime/intervalTime)]/(path.distanceLength.AsMeter()/1000);
         if (density < 50)
             color = QColor(0,255,0);
         else if (density < 80)

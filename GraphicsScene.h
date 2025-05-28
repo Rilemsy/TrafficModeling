@@ -41,7 +41,6 @@ public:
         _pathListRef = pathList;
     }
 
-
     void    paintNodes();
     void    paintPath(const std::vector<int>&);
     void    paintAllPathIndexes();

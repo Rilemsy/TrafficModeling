@@ -31,7 +31,6 @@ public:
     void    changeMapZoom(double zoomFactor);
     void    moveMap(osmscout::GeoCoord coord);
     void    paintMap();
-    void    addRoutes(unsigned int numOfCars);
 
 private:
     Router*             _router;

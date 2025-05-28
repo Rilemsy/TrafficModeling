@@ -3,11 +3,8 @@
 
 #include <osmscout/db/Database.h>
 #include <osmscout/db/BasemapDatabase.h>
-
 #include <osmscout/projection/MercatorProjection.h>
-
 #include <osmscout/cli/CmdLineParsing.h>
-
 #include <osmscoutmap/MapService.h>
 
 #include <iostream>
@@ -114,7 +111,6 @@ public:
 
     MapArgumentParser argParser;
 
-
 public:
     Map(const std::string& appName,
                 int argc, char* argv[],
@@ -122,7 +118,6 @@ public:
                 MapArgParserWindowStyle windowStyle=ARG_WS_CONSOLE)
         : argParser(appName, argc, argv, dpi, windowStyle)
     {
-
     }
 
     bool openDatabase()
@@ -136,13 +131,7 @@ public:
 
         Arguments args=argParser.GetArguments();
 
-        osmscout::log.Debug(args.debug);
-
-        // if (!args.srtmDirectory.empty()) {
-        //     databaseParameter.SetSRTMDirectory(args.srtmDirectory);
-        // }
         osmscout::DatabaseParameter databaseParameter;
-
         database=std::make_shared<osmscout::Database>(databaseParameter);
 
         if (!database->Open(args.dbPath)) {
@@ -168,32 +157,15 @@ public:
         drawParameter.SetRenderBackground(false);
         drawParameter.SetRenderContourLines(args.renderContourLines);
         drawParameter.SetRenderHillShading(args.renderHillShading);
-
         drawParameter.SetIconMode(args.iconMode);
         drawParameter.SetIconPaths(args.iconPaths);
-
         drawParameter.SetDebugData(args.debug);
         drawParameter.SetDebugPerformance(args.debug);
-
-        // TODO: arguments
         drawParameter.SetLabelLineMinCharCount(15);
         drawParameter.SetLabelLineMaxCharCount(30);
         drawParameter.SetLabelLineFitToArea(true);
 
-        projection.Set(args.center,
-                       args.angle.AsRadians(),
-                       args.zoom,
-                       args.dpi,
-                       args.width,
-                       args.height);
-
-        // if (!args.basemap.empty()) {
-        //     basemapDatabase=std::make_shared<osmscout::BasemapDatabase>(osmscout::BasemapDatabaseParameter{});
-        //     if (!basemapDatabase->Open(args.basemap)){
-        //         std::cerr << "Cannot open base map" << std::endl;
-        //         return false;
-        //     }
-        // }
+        projection.Set(args.center, args.angle.AsRadians(), args.zoom, args.dpi, args.width, args.height);
 
         return true;
     }
@@ -201,14 +173,7 @@ public:
     void loadData()
     {
         std::list<osmscout::TileRef> tiles;
-
-        assert(database);
-        assert(database->IsOpen());
-        assert(mapService);
-        assert(styleConfig);
-
         data.ClearDBData();
-
         osmscout::AreaSearchParameter searchParameter;
 
         mapService->LookupTiles(projection,tiles);
@@ -219,8 +184,6 @@ public:
         if (GetArguments().renderHillShading) {
             data.srtmTile=mapService->GetSRTMData(projection);
         }
-
-        //loadBaseMapTiles(data.baseMapTiles);
     }
 
     Arguments GetArguments() const

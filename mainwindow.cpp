@@ -3,8 +3,6 @@
 #include <osmscoutmap/MapService.h>
 #include <osmscoutmapqt/MapPainterQt.h>
 
-#include <iostream>
-
 #include <QGuiApplication>
 #include <QApplication>
 #include <QScreen>
@@ -22,9 +20,6 @@
 #include <QTextStream>
 #include <QStandardItemModel>
 #include <QHBoxLayout>
-
-#include <queue>
-#include <unordered_set>
 
 #include "mainwindow.h"
 
@@ -112,14 +107,11 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     userLayout->setColumnStretch(userLayout->columnCount(), 1);
     userLayout->setRowStretch(userLayout->rowCount(), 1);
-    //timeLayout->addStretch(1);
-
     userGroupBox->setLayout(userLayout);
 
 
     _scene = new GraphicsScene();
     auto screenGeometry = QApplication::primaryScreen()->geometry();
-    //scene_->setSceneRect(0, 0, 800, 600);
     _scene->setSceneRect(0, 0, screenGeometry.width(), screenGeometry.height());
 
     QWidget* centralWidget = new QWidget(this);
@@ -127,11 +119,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
 
     QHBoxLayout* mainLayout = new QHBoxLayout(centralWidget);
 
-
     _graphicsView = new QGraphicsView(_scene, this);
-    // _graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    // _graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    //setCentralWidget(graphicsView);
     _graphicsView->setRenderHint(QPainter::Antialiasing);
     _graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
     _graphicsView->viewport()->installEventFilter(this);
@@ -147,46 +135,42 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     _pixmap = new QPixmap(static_cast<int>(_args.width),
                           static_cast<int>(_args.height));
     _painter = new QPainter(_pixmap);
-    //painter_->setBackground(QBrush(Qt::white));
-
-
 
     connect(resetButton, &QPushButton::clicked, [this]
-            {
-                _router->setIntervalTime(_intervalTime);
-                _router->initDensities(_intervalTime);
-            });
+    {
+        _router->setIntervalTime(_intervalTime);
+        _router->initDensities(_intervalTime);
+    });
 
     connect(runButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
-            {
-                _router->setIntervalTime(_intervalTime);
-                _router->addRoutes(numOfCarsSpinBox->value(), _weightLineEdit->text().toFloat() , _loadCheckBox->isChecked(),
-                                   _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args);
-                QMessageBox::information(this, "Информация","Выполнение завершено.");
-            });
+    {
+        _router->setIntervalTime(_intervalTime);
+        _router->addRoutes(numOfCarsSpinBox->value(), _weightLineEdit->text().toFloat() , _loadCheckBox->isChecked(),
+                           _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args);
+        QMessageBox::information(this, "Информация","Выполнение завершено.");
+    });
 
     connect(timeIntervalLineEdit, &QLineEdit::editingFinished, [this, timeIntervalLineEdit]
-            {
-                _intervalTime = timeIntervalLineEdit->text().toInt();
-                _router->setIntervalTime(_intervalTime);
-            });
+    {
+        _intervalTime = timeIntervalLineEdit->text().toInt();
+        _router->setIntervalTime(_intervalTime);
+    });
 
     connect(increaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
-            {
-                _modelingTime += _intervalTime;
-                modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
-            });
-
+    {
+        _modelingTime += _intervalTime;
+        modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
+    });
 
     connect(decreaseTimeButton, &QPushButton::clicked, [this, modelingTimeLabel]
-            {
-                int res = _modelingTime - _intervalTime;
-                if (res <= 0)
-                    _modelingTime = 0;
-                else
-                    _modelingTime -= _intervalTime;
-                modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
-            });
+    {
+        int res = _modelingTime - _intervalTime;
+        if (res <= 0)
+            _modelingTime = 0;
+        else
+            _modelingTime -= _intervalTime;
+        modelingTimeLabel->setText("Время: " + QString::number(_modelingTime));
+    });
 
     connect(constructRouteButton, &QPushButton::clicked, [this]
     {
@@ -203,7 +187,6 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
         }
         if(!route.constructedRoute.empty())
         {
-            //_scene->paintPath(route.constructedRoute);
             _lastRoute = route.constructedRoute;
             QMessageBox::information(this,"Информация", "Маршрут построен.");
             QString result = QString("Время поездки: %1 с.\nВремя выполнения: %2 с.\nКоличество посещенных узлов: %3").arg(route.travelTime).arg(route.execTime).arg(route.visitedNodeCount);
@@ -234,18 +217,6 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         paintMap();
     });
-
-
-    // connect(_weightTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
-    // {
-    //     _planningMode = static_cast<WeightType>(index);
-    // });
-
-    // connect(algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
-    // {
-    //     _algorithm = static_cast<Algorithm>(index);
-    // });
-
 }
 
 void MainWindow::setMap()
@@ -266,7 +237,6 @@ void MainWindow::initGraph()
     _router->loadNodesData(_args, dist, _args.center);
     _router->buildGraph();
 
-    //auto& graph = router_->getGraph();
     _nodeListRef = &_router->getNodeList();
     _pathListRef = &_router->getPathList();
     _scene->setNodeList(_nodeListRef);
@@ -277,23 +247,6 @@ void MainWindow::initGraph()
     QIntValidator* nodeValidator = new QIntValidator(0, _nodeListRef->size()-1, this);
     _startNodeLineEdit->setValidator(nodeValidator);
     _targetNodeLineEdit->setValidator(nodeValidator);
-
-
-    //_scene->paintDots(_graphRef);
-
-    //scene_->paintCurrentTraffic(_graphRef, _pathListRef,_modelingTime,_intervalTime);
-
-    //scene_->paintAllPathIndexes(_graphRef, _pathListRef);
-    //scene_->paintAllNodeIndexes(_graphRef);
-
-    //const auto& path = router_->findPathAStar(5,98);
-    // const auto& path = router_->findPathAStarTime(5,98,_startTimeLineEdit->text().toInt(),_intervalTime);
-    // scene_->paintPath(_graphRef, path);
-
-    //onst auto& path = router_->findPathAStar(844,2);
-    //const auto& path = router_->findPathDijkstra(844,2);
-    //scene_->paintPath(_graphRef, path);
-    //placeCars(24);
 }
 
 void MainWindow::changeMapZoom(double zoomFactor)
@@ -311,12 +264,10 @@ void MainWindow::changeMapZoom(double zoomFactor)
     _painter = new QPainter(_pixmap);
     osmscout::MapPainterQt mapPainter(_map.styleConfig);
     _map.loadData();
-    if (mapPainter.DrawMap(_map.projection, _map.drawParameter,
-                           _map.data, _painter))
+    if (mapPainter.DrawMap(_map.projection, _map.drawParameter, _map.data, _painter))
     {
         _scene->setMap(_pixmap);
     }
-    //paintMap();
 
     if (_showTrafficCheckBox->isChecked())
         _scene->paintCurrentTraffic(_modelingTime,_intervalTime);
@@ -334,22 +285,18 @@ void MainWindow::moveMap(osmscout::GeoCoord coord)
     _scene->clearMap();
     _scene->clear();
     _args.center = coord;
-    _map.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom,
-                            _args.dpi, _args.width, _args.height);
+    _map.projection.Set(_args.center, _args.angle.AsRadians(), _args.zoom, _args.dpi, _args.width, _args.height);
     delete _painter;
     delete _pixmap;
-    _pixmap = new QPixmap(static_cast<int>(_args.width),
-                          static_cast<int>(_args.height));
+    _pixmap = new QPixmap(static_cast<int>(_args.width), static_cast<int>(_args.height));
     _pixmap->fill(Qt::white);
     _painter = new QPainter(_pixmap);
     osmscout::MapPainterQt mapPainter(_map.styleConfig);
     _map.loadData();
-    if (mapPainter.DrawMap(_map.projection, _map.drawParameter,
-                           _map.data, _painter))
+    if (mapPainter.DrawMap(_map.projection, _map.drawParameter, _map.data, _painter))
     {
         _scene->setMap(_pixmap);
     }
-    //paintMap();
 
     if (_showTrafficCheckBox->isChecked())
         _scene->paintCurrentTraffic(_modelingTime,_intervalTime);

@@ -44,7 +44,7 @@ public:
     Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate);
     Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate);
 
-    void                addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args);
+    void                addRoutes(unsigned int numOfCars, int batchSize, int timeInterval,float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args);
     float               trafficDiagramFunction(float density, float vf);
     float               calculateRouteCost(const std::vector<int>& route, float startTime, bool densityUpdate);
 

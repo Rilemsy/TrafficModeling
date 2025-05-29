@@ -81,6 +81,16 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QSpinBox* numOfCarsSpinBox = new QSpinBox(this);
     numOfCarsSpinBox->setValue(10);
     numOfCarsSpinBox->setRange(0, 100000);
+    QLabel* groupSizeLabel = new QLabel("Размер группы:", this);
+    _groupSizeLineEdit = new QLineEdit(this);
+    _groupSizeLineEdit->setText("1");
+    QLabel* groupTimeIntervalLabel = new QLabel("Интервал между группами:", this);
+    _groupTimeIntervalLineEdit = new QLineEdit(this);
+    _groupTimeIntervalLineEdit->setText("2");
+    QIntValidator* intValidator = new QIntValidator(this);
+    intValidator->setBottom(1);
+    _groupSizeLineEdit->setValidator(intValidator);
+    _groupTimeIntervalLineEdit->setValidator(intValidator);
     QPushButton* runButton = new QPushButton("Запустить",this);
     QLabel* resultLabel = new QLabel("Результат:",this);
     _resultTextEdit = new QTextEdit(this);
@@ -101,9 +111,13 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     userLayout->addWidget(resetButton, 12, 0, 1, 2);
     userLayout->addWidget(numOfCarsLabel, 13, 0);
     userLayout->addWidget(numOfCarsSpinBox, 13, 1);
-    userLayout->addWidget(runButton, 14, 0, 1, 2);
-    userLayout->addWidget(resultLabel, 15, 0);
-    userLayout->addWidget(_resultTextEdit, 16, 0, 1, 2);
+    userLayout->addWidget(groupSizeLabel, 14, 0);
+    userLayout->addWidget(_groupSizeLineEdit, 14, 1);
+    userLayout->addWidget(groupTimeIntervalLabel, 15, 0);
+    userLayout->addWidget(_groupTimeIntervalLineEdit, 15, 1);
+    userLayout->addWidget(runButton, 16, 0, 1, 2);
+    userLayout->addWidget(resultLabel, 17, 0);
+    userLayout->addWidget(_resultTextEdit, 18, 0, 1, 2);
 
     userLayout->setColumnStretch(userLayout->columnCount(), 1);
     userLayout->setRowStretch(userLayout->rowCount(), 1);
@@ -145,8 +159,8 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     connect(runButton, &QPushButton::clicked, [this, numOfCarsSpinBox]
     {
         _router->setIntervalTime(_intervalTime);
-        _router->addRoutes(numOfCarsSpinBox->value(), _weightLineEdit->text().toFloat() , _loadCheckBox->isChecked(),
-                           _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args);
+        _router->addRoutes(numOfCarsSpinBox->value(), _groupSizeLineEdit->text().toInt(), _groupTimeIntervalLineEdit->text().toInt(), _weightLineEdit->text().toFloat(),
+            _loadCheckBox->isChecked(), _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args);
         QMessageBox::information(this, "Информация","Выполнение завершено.");
     });
 

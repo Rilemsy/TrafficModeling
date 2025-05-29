@@ -56,6 +56,8 @@ private:
     QLineEdit*          _targetNodeLineEdit;
     QTextEdit*          _resultTextEdit;
     QCheckBox*          _loadCheckBox;
+    QLineEdit*          _groupSizeLineEdit;
+    QLineEdit*          _groupTimeIntervalLineEdit;
 
     unsigned int    _modelingTime = 0;  // в секундах
     unsigned int    _intervalTime = 10;

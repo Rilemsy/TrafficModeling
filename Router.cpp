@@ -145,13 +145,11 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, float start
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
-    using NodeCostPair = std::pair<int, double>;
-
-    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+    auto compare = [](const std::pair<int, double>& a, const std::pair<int, double>& b) {
         return a.second > b.second;
     };
 
-    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::priority_queue<std::pair<int, double>, std::vector<std::pair<int, double>>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
 
@@ -242,13 +240,11 @@ Route Router::findPathDijkstra(int startNodeIndex, int targetNodeIndex, float st
 {
     auto startMeasure = std::chrono::steady_clock::now();
 
-    using NodeCostPair = std::pair<int, double>;
-
-    auto compare = [](const NodeCostPair& a, const NodeCostPair& b) {
+    auto compare = [](const std::pair<int, double>& a, const std::pair<int, double>& b) {
         return a.second > b.second;
     };
 
-    std::priority_queue<NodeCostPair, std::vector<NodeCostPair>, decltype(compare)> priorityQueue(compare);
+    std::priority_queue<std::pair<int, double>, std::vector<std::pair<int, double>>, decltype(compare)> priorityQueue(compare);
     std::unordered_map<int, double> gScore;
     std::unordered_map<int, std::pair<int,int>> previous;
 
@@ -377,8 +373,6 @@ Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float
 
     auto finishMeasure = std::chrono::steady_clock::now();
     auto elapsed =std::chrono::duration_cast<std::chrono::nanoseconds>(finishMeasure - startMeasure);
-    auto time = elapsed.count() * 1e-9;
-
 
     if (previous.find(targetNodeIndex) == previous.end())
     {
@@ -464,7 +458,7 @@ Route Router::findPath(int startNodeIndex, int endNodeIndex, float startTime, fl
     return route;
 }
 
-void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args)
+void Router::addRoutes(unsigned int numOfCars, int batchSize, int timeInterval, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args)
 {
     struct RouteStats
     {
@@ -501,8 +495,6 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
     initDensities(_intervalTime);
 
     unsigned int i = 0;
-    int routeStartTime = 0;
-    int carBatch = 10;
 
     QRandomGenerator random(1234);
     while (i < numOfCars)
@@ -514,15 +506,15 @@ void Router::addRoutes(unsigned int numOfCars, float weight, bool withLoad, bool
             startNode = random.bounded(0,graphSize);
             targetNode = random.bounded(0,graphSize);
         }
-        auto route = findPath(startNode, targetNode, routeStartTime, weight, withLoad, densityUpdate, algorithm);
+        auto route = findPath(startNode, targetNode, timeInterval, weight, withLoad, densityUpdate, algorithm);
         path = route.constructedRoute;
         if (!path.empty())
         {
-            out << i+1 << "," << route.travelTime << "," << route.execTime << "," << route.visitedNodeCount <<"\n";
+            out << i+1 << "," << route.travelTime << "," << route.execTime << "," << route.visitedNodeCount << "," << route.startTime <<"\n";
 
-            if (i % carBatch == 0)
+            if (i % batchSize == 0)
             {
-                routeStartTime += 2;
+                timeInterval += 2;
             }
             i++;
         }

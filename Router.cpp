@@ -34,8 +34,7 @@ void Router::loadNodesData(const Arguments &args,
                 ++validPaths;
             }
         }
-        osmscout::Distance directDistance =
-            osmscout::GetSphericalDistance(coord, node.GetCoord());
+        osmscout::Distance directDistance = osmscout::GetSphericalDistance(coord, node.GetCoord());
         if (validPaths > 0  && directDistance <= maxRange)
         {
             _routeNodeList.push_back(node);
@@ -56,6 +55,7 @@ void Router::buildGraph()
         idToIndexMap[_routeNodeList[i].GetId()] = i;
     }
     _nodeList.reserve(_routeNodeList.size());
+
     for (const auto& routeNode : _routeNodeList)
     {
         Node node;
@@ -409,14 +409,12 @@ Route Router::findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float
 
 float Router::trafficDiagramFunction(float p, float vf)
 {
-    float pj = 134;
-
     if (p > DENSITY_LIMIT)
     {
         p = DENSITY_LIMIT;
     }
 
-    float result = vf * std::log(pj/p);
+    float result = vf * std::log(_pj/p);
 
     if (result > vf) // км/ч
         return vf;
@@ -534,12 +532,17 @@ float Router::calculateRouteCost(const std::vector<int>& paths, float startTime,
         float pathCost = ((path.distanceLength.AsMeter() / 1000.0) / (diagramRes)) * 3600; // в секундах
         if (densityUpdate)
         {
-            _pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] += 1.0;
-
-            if (_pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] /
-                    ((_pathList[pathIndex].distanceLength.AsMeter()/1000)*_pathList[pathIndex].lanes) > DENSITY_LIMIT)
+            float updateTime = 0;
+            while (updateTime < pathCost)
             {
-                _pathList[pathIndex].densities[std::floor((travelTime+startTime)/_intervalTime)] -= 1.0;
+                _pathList[pathIndex].densities[std::floor((travelTime+startTime+updateTime)/_intervalTime)] += 1.0;
+
+                if (_pathList[pathIndex].densities[std::floor((travelTime+startTime+updateTime)/_intervalTime)] /
+                        ((_pathList[pathIndex].distanceLength.AsMeter()/1000)*_pathList[pathIndex].lanes) > DENSITY_LIMIT)
+                {
+                    _pathList[pathIndex].densities[std::floor((travelTime+startTime+updateTime)/_intervalTime)] -= 1.0;
+                }
+                updateTime += _intervalTime;
             }
         }
         travelTime += pathCost;

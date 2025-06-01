@@ -60,6 +60,8 @@ private:
     const int                           TIME_RANGE = 43200;  // в секундах
     const int                           DENSITY_LIMIT = 120;
     float                               _intervalTime = 10;
+    float                               _pj = 134;
+
 
 };
 

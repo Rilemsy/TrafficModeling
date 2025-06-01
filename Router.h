@@ -10,7 +10,6 @@
 #include <QObject>
 
 
-
 class Router : public QObject
 {
     Q_OBJECT
@@ -33,8 +32,7 @@ public:
         _intervalTime = time;
     }
 
-    void                loadNodesData(const Arguments &args, const osmscout::Distance &maxRange,
-                            osmscout::GeoCoord coord);
+    void                loadNodesData(const Arguments &args, const osmscout::Distance &maxRange, osmscout::GeoCoord coord);
     void                buildGraph();
     void                initDensities(double intervalTime);
     void                setDatabase(osmscout::DatabaseRef database);
@@ -61,8 +59,6 @@ private:
     const int                           DENSITY_LIMIT = 120;
     float                               _intervalTime = 10;
     float                               _pj = 134;
-
-
 };
 
 #endif // ROUTER_H

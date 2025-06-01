@@ -11,9 +11,7 @@
 
 Router::Router() {}
 
-void Router::loadNodesData(const Arguments &args,
-                           const osmscout::Distance &maxRange,
-                           osmscout::GeoCoord coord)
+void Router::loadNodesData(const Arguments &args, const osmscout::Distance &maxRange, osmscout::GeoCoord coord)
 {
     osmscout::FileScanner routeReader;
     routeReader.Open(args.dbPath + "router.dat", osmscout::FileScanner::Sequential, true);

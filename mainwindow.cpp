@@ -24,8 +24,7 @@
 #include "mainwindow.h"
 
 MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
-    : QMainWindow(parent),
-    _map("QMap", argc, argv, screen)
+    : QMainWindow(parent), _map("QMap", argc, argv, screen)
 {
     _router = new Router();
     QFile file("output.csv");

@@ -19,7 +19,8 @@ class GraphicsScene : public QGraphicsScene
 {
     Q_OBJECT
 public:
-    explicit GraphicsScene(QObject *parent = 0) : QGraphicsScene(parent)
+    explicit GraphicsScene(QObject *parent = 0)
+        : QGraphicsScene(parent)
     {
         setBackgroundBrush(Qt::white);
     };
@@ -30,15 +31,15 @@ public:
     void    clearMap();
     void    setProjection(osmscout::MercatorProjection *projection)
     {
-        _projection = projection;
+            _projection = projection;
     }
     void    setNodeList(std::vector<Node>*  nodeList)
     {
-        _nodeListRef = nodeList;
+            _nodeListRef = nodeList;
     }
     void    setPathList(std::vector<Path>*  pathList)
     {
-        _pathListRef = pathList;
+            _pathListRef = pathList;
     }
 
     void    paintNodes();

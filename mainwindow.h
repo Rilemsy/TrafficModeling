@@ -59,7 +59,7 @@ private:
     QLineEdit*          _groupSizeLineEdit;
     QLineEdit*          _groupTimeIntervalLineEdit;
 
-    unsigned int    _modelingTime = 0;  // в секундах
-    unsigned int    _intervalTime = 10;
+    unsigned int        _modelingTime = 0;  // в секундах
+    unsigned int        _intervalTime = 10;
 };
 #endif // MAINWINDOW_H

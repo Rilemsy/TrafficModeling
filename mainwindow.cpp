@@ -92,6 +92,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     QPushButton* runButton = new QPushButton("Запустить",this);
     QLabel* resultLabel = new QLabel("Результат:",this);
     _resultTextEdit = new QTextEdit(this);
+    _historicalDataCheckBox = new QCheckBox("Генерация данных истории", this);
 
     userLayout->addWidget(modelingTimeLabel, 1, 0, 1, 2);
     userLayout->addLayout(timeLayout, 2, 0, 1, 2);
@@ -116,6 +117,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     userLayout->addWidget(runButton, 16, 0, 1, 2);
     userLayout->addWidget(resultLabel, 17, 0);
     userLayout->addWidget(_resultTextEdit, 18, 0, 1, 2);
+    userLayout->addWidget(_historicalDataCheckBox, 19,0,1,2);
 
     userLayout->setColumnStretch(userLayout->columnCount(), 1);
     userLayout->setRowStretch(userLayout->rowCount(), 1);
@@ -158,7 +160,7 @@ MainWindow::MainWindow(int argc, char *argv[], double screen, QWidget *parent)
     {
         _router->setIntervalTime(_intervalTime);
         _router->addRoutes(numOfCarsSpinBox->value(), _groupSizeLineEdit->text().toInt(), _groupTimeIntervalLineEdit->text().toInt(), _weightLineEdit->text().toFloat(),
-            _loadCheckBox->isChecked(), _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args);
+            _loadCheckBox->isChecked(), _updateDensitiesCheckBox->isChecked(), static_cast<Algorithm>(_algorithmComboBox->currentIndex()), _args, _historicalDataCheckBox->isChecked());
         QMessageBox::information(this, "Информация","Выполнение завершено.");
     });
 

@@ -151,6 +151,8 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, float start
     std::unordered_map<int, double> gScore;                 // цена по времени
     std::unordered_map<int, std::pair<int,int>> previous;   // в паре индекс узла, индекс ребра
 
+    auto& pathListRef = (_isHistoricalData && _isHistoricalDataLoaded) ? _histPathList : _pathList;
+
     gScore[startNodeIndex] = startTime;
     priorityQueue.push({startNodeIndex, 0});
 
@@ -164,8 +166,8 @@ Route Router::findPathAStar(int startNodeIndex, int targetNodeIndex, float start
 
         for (const auto& pathIndex : _nodeList[currentIndex].paths)
         {
-            Path path = _pathList[pathIndex];
-            int neighborIndex = _pathList[pathIndex].targetNodeIndex;
+            Path path = pathListRef[pathIndex];
+            int neighborIndex = pathListRef[pathIndex].targetNodeIndex;
             _nodeList[neighborIndex].isVisited = true;
 
             double h = 0, pathCost = 0, density = 0;
@@ -454,23 +456,18 @@ Route Router::findPath(int startNodeIndex, int endNodeIndex, float startTime, fl
     return route;
 }
 
-void Router::addRoutes(unsigned int numOfCars, int batchSize, int timeInterval, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args)
+void Router::addRoutes(unsigned int numOfCars, int batchSize, int timeInterval, float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args, bool isHistoricalData)
 {
-    struct RouteStats
-    {
-        float cost = 0;
-        double execTime = 0;
-        int visitedNodeCount = 0;
-    };
 
     int graphSize = _nodeList.size();
     std::vector<int> path;
-    std::vector<double> travelTimes;
-    std::vector<Route> routes;
+    _isHistoricalData = isHistoricalData;
 
     QFile file;
 
-    if(withLoad)
+    if (withLoad && _isHistoricalData)
+        file.setFileName("simulationDistance.csv");
+    else if(withLoad)
         file.setFileName("simulationTime.csv");
     else
         file.setFileName("simulationDistance.csv");
@@ -486,13 +483,11 @@ void Router::addRoutes(unsigned int numOfCars, int batchSize, int timeInterval, 
         out.setDevice(&file);
     }
 
-    std::vector<RouteStats> avgRoutes(numOfCars);
-
     initDensities(_intervalTime);
 
     unsigned int i = 0;
-
-    QRandomGenerator random(1234);
+    int seed = 1234+((_isHistoricalData && !_isHistoricalDataLoaded) ? 2 : 0);
+    QRandomGenerator random(seed);
     while (i < numOfCars)
     {
         int startNode = random.bounded(0,graphSize);
@@ -516,6 +511,12 @@ void Router::addRoutes(unsigned int numOfCars, int batchSize, int timeInterval, 
         }
     }
 
+    if(_isHistoricalData && !_isHistoricalDataLoaded)
+    {
+        _histPathList.clear();
+        _histPathList.insert(_histPathList.begin(), _pathList.begin(), _pathList.end());
+        _isHistoricalDataLoaded = true;
+    }
     file.close();
 }
 

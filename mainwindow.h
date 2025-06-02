@@ -58,6 +58,7 @@ private:
     QCheckBox*          _loadCheckBox;
     QLineEdit*          _groupSizeLineEdit;
     QLineEdit*          _groupTimeIntervalLineEdit;
+    QCheckBox*          _historicalDataCheckBox;
 
     unsigned int        _modelingTime = 0;  // в секундах
     unsigned int        _intervalTime = 10;

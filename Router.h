@@ -42,7 +42,7 @@ public:
     Route               findPathDijkstra(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate);
     Route               findPathBellmanFord(int startNodeIndex, int targetNodeIndex, float startTime, bool withLoad, bool densityUpdate);
 
-    void                addRoutes(unsigned int numOfCars, int batchSize, int timeInterval,float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args);
+    void                addRoutes(unsigned int numOfCars, int batchSize, int timeInterval,float weight, bool withLoad, bool densityUpdate, Algorithm algorithm, const Arguments &args, bool isHistoricalData);
     float               trafficDiagramFunction(float density, float vf);
     float               calculateRouteCost(const std::vector<int>& route, float startTime, bool densityUpdate);
 
@@ -54,6 +54,11 @@ private:
     uint32_t                            _nodeCount;
     osmscout::DatabaseRef               _database;
     unsigned int                        _maxspeed = 65;
+
+    std::vector<Path>                   _histPathList;
+    bool                                _isHistoricalData = false;
+    bool                                _isHistoricalDataLoaded = false;
+
 
     const int                           TIME_RANGE = 43200;  // в секундах
     const int                           DENSITY_LIMIT = 120;

@@ -1,5 +1,4 @@
 #include <osmscout/db/Database.h>
-#include <osmscout/feature/ConstructionYearFeature.h>
 #include <osmscoutmap/MapService.h>
 #include <osmscoutmapqt/MapPainterQt.h>
 

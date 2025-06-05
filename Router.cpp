@@ -542,6 +542,17 @@ float Router::calculateRouteCost(const std::vector<int>& paths, float startTime,
                 }
                 updateTime += _intervalTime;
             }
+
+            if(std::floor((travelTime+startTime+updateTime-_intervalTime)/_intervalTime)<std::floor((travelTime+startTime+pathCost)/_intervalTime))
+            {
+                _pathList[pathIndex].densities[std::floor((travelTime+startTime+pathCost)/_intervalTime)] += 1.0;
+
+                if (_pathList[pathIndex].densities[std::floor((travelTime+startTime+pathCost)/_intervalTime)] /
+                        ((_pathList[pathIndex].distanceLength.AsMeter()/1000)*_pathList[pathIndex].lanes) > DENSITY_LIMIT)
+                {
+                    _pathList[pathIndex].densities[std::floor((travelTime+startTime+pathCost)/_intervalTime)] -= 1.0;
+                }
+            }
         }
         travelTime += pathCost;
     }
